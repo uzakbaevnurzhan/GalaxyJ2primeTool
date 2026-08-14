@@ -30,7 +30,8 @@ data class RomAnalysisResult(
     val buildPropFound: Boolean,
     val bootFound: Boolean,
     val systemFound: Boolean,
-    val vendorFound: Boolean
+    val vendorFound: Boolean,
+    val buildPropContent: String?
 )
 
 class ROMAnalyzerViewModel : ViewModel() {
@@ -64,24 +65,40 @@ class ROMAnalyzerViewModel : ViewModel() {
                     var bootFound = false
                     var systemFound = false
                     var vendorFound = false
+                    var propContent: String? = null
 
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         ZipInputStream(inputStream).use { zip ->
                             var entry = zip.nextEntry
                             var count = 0
-                            while (entry != null && count < 1000) { // Limit for preview
+                            while (entry != null && count < 2000) { // Limit for preview
                                 val name = entry.name
                                 entries.add(name)
-                                if (name.contains("build.prop")) buildPropFound = true
                                 if (name.contains("boot.img")) bootFound = true
                                 if (name.contains("system")) systemFound = true
                                 if (name.contains("vendor")) vendorFound = true
+                                
+                                if (name.endsWith("build.prop") && propContent == null) {
+                                    buildPropFound = true
+                                    val reader = java.io.BufferedReader(java.io.InputStreamReader(zip))
+                                    var line = reader.readLine()
+                                    var linesRead = 0
+                                    var content = ""
+                                    while (line != null && linesRead < 50) { // read top 50 lines
+                                        content += "$line\n"
+                                        line = reader.readLine()
+                                        linesRead++
+                                    }
+                                    if (line != null) content += "...\n"
+                                    propContent = content
+                                }
+                                
                                 entry = zip.nextEntry
                                 count++
                             }
                         }
                     }
-                    RomAnalysisResult(fileName, entries, buildPropFound, bootFound, systemFound, vendorFound)
+                    RomAnalysisResult(fileName, entries, buildPropFound, bootFound, systemFound, vendorFound, propContent)
                 }
                 _analysisResult.value = result
             } catch (e: Exception) {
@@ -137,7 +154,16 @@ fun ROMAnalyzerScreen(navController: NavController, viewModel: ROMAnalyzerViewMo
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Files Preview (Top 1000):", style = MaterialTheme.typography.titleMedium)
+            
+            if (result.buildPropContent != null) {
+                Text("build.prop Preview:", style = MaterialTheme.typography.titleMedium)
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Text(text = result.buildPropContent, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            Text("Files Preview (Top 2000):", style = MaterialTheme.typography.titleMedium)
             LazyColumn {
                 items(result.entries) { entry ->
                     Text(text = entry, style = MaterialTheme.typography.bodySmall)

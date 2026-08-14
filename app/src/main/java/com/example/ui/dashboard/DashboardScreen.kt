@@ -50,6 +50,8 @@ fun DashboardScreen(navController: NavController) {
             "Log Analyzer" to "log_analyzer",
             "Compatibility Check" to "compatibility_check",
             "ROM Builder" to "rom_builder",
+            "GitHub Releases" to "github",
+            "My Website" to "webview"
         )
 
         items(actions.size) { index ->

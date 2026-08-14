@@ -28,10 +28,8 @@ import java.io.InputStreamReader
 
 data class LogAnalysisResult(
     val fileName: String,
-    val criticalCount: Int,
-    val highCount: Int,
-    val warningCount: Int,
-    val lines: List<String>
+    val groupedErrors: Map<String, List<String>>,
+    val totalErrors: Int
 )
 
 class LogAnalyzerViewModel : ViewModel() {
@@ -60,29 +58,68 @@ class LogAnalyzerViewModel : ViewModel() {
                         }
                     }
 
-                    var criticalCount = 0
-                    var highCount = 0
-                    var warningCount = 0
-                    val linesToDisplay = mutableListOf<String>()
+                    val groups = mutableMapOf<String, MutableList<String>>(
+                        "FATAL EXCEPTION" to mutableListOf(),
+                        "SIGSEGV" to mutableListOf(),
+                        "Linker / dlopen / Cannot locate symbol" to mutableListOf(),
+                        "SELinux / avc: denied" to mutableListOf(),
+                        "System Server / Zygote" to mutableListOf(),
+                        "HAL / Hardware" to mutableListOf(),
+                        "SurfaceFlinger" to mutableListOf(),
+                        "Other" to mutableListOf()
+                    )
+
+                    var totalErrors = 0
 
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         BufferedReader(InputStreamReader(inputStream)).use { reader ->
                             var line = reader.readLine()
                             var count = 0
-                            while (line != null && count < 2000) { // Limit
-                                if (line.contains("FATAL EXCEPTION") || line.contains("SIGSEGV")) criticalCount++
-                                else if (line.contains("cannot locate symbol") || line.contains("library not found")) highCount++
-                                else if (line.contains("avc: denied")) warningCount++
+                            while (line != null && count < 50000) { // Stream up to 50k lines safely
+                                var matched = false
                                 
-                                if (line.contains("FATAL") || line.contains("Exception") || line.contains("Error") || line.contains("denied")) {
-                                    linesToDisplay.add(line)
+                                if (line.contains("FATAL EXCEPTION") || line.contains("AndroidRuntime")) {
+                                    groups["FATAL EXCEPTION"]?.add(line)
+                                    matched = true
                                 }
+                                if (line.contains("SIGSEGV")) {
+                                    groups["SIGSEGV"]?.add(line)
+                                    matched = true
+                                }
+                                if (line.contains("linker") || line.contains("dlopen") || line.contains("cannot locate symbol") || line.contains("library not found")) {
+                                    groups["Linker / dlopen / Cannot locate symbol"]?.add(line)
+                                    matched = true
+                                }
+                                if (line.contains("avc: denied") || line.contains("SELinux")) {
+                                    groups["SELinux / avc: denied"]?.add(line)
+                                    matched = true
+                                }
+                                if (line.contains("system_server") || line.contains("zygote") || line.contains("init")) {
+                                    if (line.contains(" E ") || line.contains(" F ") || line.contains(" W ")) {
+                                        groups["System Server / Zygote"]?.add(line)
+                                        matched = true
+                                    }
+                                }
+                                if (line.contains("hwservicemanager") || line.contains("HAL")) {
+                                    if (line.contains(" E ") || line.contains(" F ") || line.contains(" W ")) {
+                                        groups["HAL / Hardware"]?.add(line)
+                                        matched = true
+                                    }
+                                }
+                                if (line.contains("SurfaceFlinger")) {
+                                    if (line.contains(" E ") || line.contains(" F ") || line.contains(" W ")) {
+                                        groups["SurfaceFlinger"]?.add(line)
+                                        matched = true
+                                    }
+                                }
+                                
+                                if (matched) totalErrors++
                                 line = reader.readLine()
                                 count++
                             }
                         }
                     }
-                    LogAnalysisResult(fileName, criticalCount, highCount, warningCount, linesToDisplay)
+                    LogAnalysisResult(fileName, groups.filterValues { it.isNotEmpty() }, totalErrors)
                 }
                 _analysisResult.value = result
             } catch (e: Exception) {
@@ -131,9 +168,7 @@ fun LogAnalyzerScreen(navController: NavController, viewModel: LogAnalyzerViewMo
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("File: ${result.fileName}", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("CRITICAL: ${result.criticalCount} errors", color = MaterialTheme.colorScheme.error)
-                    Text("HIGH: ${result.highCount} errors", color = MaterialTheme.colorScheme.primary)
-                    Text("WARNING: ${result.warningCount} warnings", color = MaterialTheme.colorScheme.secondary)
+                    Text("Found ${result.totalErrors} relevant error/warning lines", color = MaterialTheme.colorScheme.primary)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -147,7 +182,8 @@ fun LogAnalyzerScreen(navController: NavController, viewModel: LogAnalyzerViewMo
                     isAiAnalyzing = true
                     coroutineScope.launch(Dispatchers.IO) {
                         val assistant = com.example.ai.ROMAssistant()
-                        val response = assistant.analyzeLog(result.lines.joinToString("\n"), "Samsung Galaxy J2 Prime (SM-G532F)")
+                        val sampleData = result.groupedErrors.values.flatten().take(50).joinToString("\n")
+                        val response = assistant.analyzeLog(sampleData, "Samsung Galaxy J2 Prime (SM-G532F)")
                         withContext(Dispatchers.Main) {
                             aiAnalysis = response
                             isAiAnalyzing = false
@@ -172,11 +208,27 @@ fun LogAnalyzerScreen(navController: NavController, viewModel: LogAnalyzerViewMo
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Filtered Error Lines:", style = MaterialTheme.typography.titleMedium)
+            Text("Error Groups:", style = MaterialTheme.typography.titleMedium)
             LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                items(result.lines) { line ->
-                    Text(text = line, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
-                    Divider()
+                result.groupedErrors.forEach { (group, lines) ->
+                    item {
+                        Text(
+                            text = "$group (${lines.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        )
+                    }
+                    items(lines.take(20)) { line -> // Show up to 20 lines per group to avoid lag
+                        Text(text = line, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+                        Divider()
+                    }
+                    if (lines.size > 20) {
+                        item {
+                            Text(text = "... and ${lines.size - 20} more lines", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Divider()
+                        }
+                    }
                 }
             }
         }
