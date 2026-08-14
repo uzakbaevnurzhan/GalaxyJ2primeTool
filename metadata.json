@@ -1,0 +1,6 @@
+{
+  "name": "J2 Prime ROM Studio",
+  "description": "Professional mobile toolkit for analyzing and developing Android ROMs for Samsung Galaxy J2 Prime.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
