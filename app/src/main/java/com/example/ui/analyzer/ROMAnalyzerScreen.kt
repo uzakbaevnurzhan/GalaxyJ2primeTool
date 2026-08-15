@@ -167,7 +167,7 @@ fun ROMAnalyzerScreen(navController: NavController, viewModel: ROMAnalyzerViewMo
             LazyColumn {
                 items(result.entries) { entry ->
                     Text(text = entry, style = MaterialTheme.typography.bodySmall)
-                    Divider()
+                    HorizontalDivider()
                 }
             }
         }

@@ -91,20 +91,28 @@ fun AppNavigation() {
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }
             composable(Screen.Tools.route) { ToolsScreen(navController) }
-            composable("rom_analyzer") { ROMAnalyzerScreen(navController) }
-            composable("boot_analyzer") { BootAnalyzerScreen(navController) }
+            composable("image_analyzer") { com.example.ui.analyzer.image.ui.ImageAnalyzerScreen(navController) }
+            composable("rom_analyzer") { com.example.ui.analyzer.boot.ui.BootRomAnalyzerScreen(navController) }
+            composable("boot_analyzer") { com.example.ui.analyzer.boot.ui.BootRomAnalyzerScreen(navController) }
             composable(Screen.Logs.route) { LogAnalyzerScreen(navController) }
             composable("rom_compare") { ROMCompareScreen(navController) }
             composable("compatibility_check") { CompatibilityCheckScreen(navController) }
             composable("rom_builder") { ROMBuilderScreen(navController) }
             composable("device_info") { DeviceInfoScreen(navController) }
             composable("hash_calculator") { com.example.ui.tools.HashCalculatorScreen(navController) }
-            composable("buildprop_analyzer") { com.example.ui.analyzer.BuildPropAnalyzerScreen(navController) }
+            composable("buildprop_analyzer") { com.example.ui.analyzer.getprop.ui.GetpropAnalyzerScreen(navController) }
+            composable("getprop_analyzer") { com.example.ui.analyzer.getprop.ui.GetpropAnalyzerScreen(navController) }
             composable("apk_inspector") { com.example.ui.analyzer.ApkInspectorScreen(navController) }
             composable("init_analyzer") { com.example.ui.analyzer.InitScriptAnalyzerScreen(navController) }
             composable("fstab_analyzer") { com.example.ui.analyzer.FstabAnalyzerScreen(navController) }
             composable("file_explorer") { com.example.ui.explorer.FileExplorerScreen(navController) }
             composable("report_generator") { com.example.ui.tools.ReportGeneratorScreen(navController) }
+            composable("elf_analyzer") { com.example.ui.analyzer.elf.ui.ElfAnalyzerScreen(navController) }
+            composable("dat_analyzer") { com.example.ui.analyzer.dat.DatAnalyzerScreen(navController) }
+            composable("selinux_analyzer") { com.example.ui.analyzer.selinux.ui.SelinuxAnalyzerScreen(navController) }
+            composable("kernel_crash_analyzer") { com.example.ui.analyzer.kernel.ui.KernelCrashAnalyzerScreen(navController) }
+            composable("partition_analyzer") { com.example.ui.analyzer.partition.ui.PartitionAnalyzerScreen(navController) }
+            composable("flash_precheck") { com.example.ui.analyzer.flash.ui.FlashPrecheckScreen(navController) }
             
             composable(
                 route = "unified_analyzer/{toolType}",

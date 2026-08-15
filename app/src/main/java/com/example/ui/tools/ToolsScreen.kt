@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,10 +25,17 @@ fun ToolsScreen(navController: NavController) {
         ToolCategory(
             "ROM Tools",
             listOf(
+                ToolItem("ROM Image Analyzer", "Deep scan RAW, Sparse, EXT4, EROFS, Super images", "image_analyzer", Icons.Filled.Image),
                 ToolItem("ROM Analyzer", "Deep dive into system and vendor images", "rom_analyzer", Icons.Filled.Archive),
                 ToolItem("ROM Integrity Checker", "Check ROM file hashes and signatures", "hash_calculator", Icons.Filled.Verified),
-                ToolItem("Sparse Image Analyzer", "Analyze Android Sparse Images (simg)", "unified_analyzer/sparse_analyzer", Icons.Filled.Image),
-                ToolItem("DAT/DAT.BR Analyzer", "Analyze Android dat transfer lists", "unified_analyzer/dat_analyzer", Icons.Filled.DataArray),
+                ToolItem("DAT/DAT.BR Analyzer", "Analyze Android dat transfer lists", "dat_analyzer", Icons.Filled.DataArray),
+            )
+        ),
+        ToolCategory(
+            "Partition & Flashing Tools",
+            listOf(
+                ToolItem("Partition Table Analyzer", "Analyze GPT/MBR tables, MTK scatter files & gaps", "partition_analyzer", Icons.Filled.Storage),
+                ToolItem("Safe Flash Pre-Check", "Check partition limits, image sizes & brick risks", "flash_precheck", Icons.Filled.Shield),
             )
         ),
         ToolCategory(
@@ -41,10 +49,10 @@ fun ToolsScreen(navController: NavController) {
         ToolCategory(
             "System & Library Tools",
             listOf(
-                ToolItem("Build.prop Analyzer", "Analyze device properties", "buildprop_analyzer", Icons.Filled.List),
+                ToolItem("Build.prop Analyzer", "Analyze device properties", "buildprop_analyzer", Icons.AutoMirrored.Filled.List),
                 ToolItem("APK Inspector", "Analyze APK manifest and permissions", "apk_inspector", Icons.Filled.Android),
-                ToolItem("ELF Library Analyzer", "Analyze .so and ELF binaries", "unified_analyzer/elf_analyzer", Icons.Filled.SettingsSystemDaydream),
-                ToolItem("SELinux Policy Analyzer", "Analyze sepolicy and contexts", "unified_analyzer/selinux_analyzer", Icons.Filled.Security),
+                ToolItem("ELF Library Analyzer", "Analyze .so and ELF binaries", "elf_analyzer", Icons.Filled.SettingsSystemDaydream),
+                ToolItem("SELinux Policy Analyzer", "Analyze sepolicy, contexts and AVC denials", "selinux_analyzer", Icons.Filled.Security),
             )
         ),
         ToolCategory(
@@ -52,7 +60,7 @@ fun ToolsScreen(navController: NavController) {
             listOf(
                 ToolItem("Workspace Explorer", "Browse and modify extracted ROMs", "file_explorer", Icons.Filled.FolderOpen),
                 ToolItem("Hex Viewer", "View binary files in hex format", "unified_analyzer/hex_viewer", Icons.Filled.DataArray),
-                ToolItem("Text Viewer", "View raw text files", "unified_analyzer/text_viewer", Icons.Filled.TextSnippet),
+                ToolItem("Text Viewer", "View raw text files", "unified_analyzer/text_viewer", Icons.AutoMirrored.Filled.TextSnippet),
                 ToolItem("Hash Calculator", "Calculate MD5/SHA hashes", "hash_calculator", Icons.Filled.Tag),
             )
         ),
@@ -60,13 +68,13 @@ fun ToolsScreen(navController: NavController) {
             "Log Tools",
             listOf(
                 ToolItem("System Log Analyzer", "Analyze Logcat, dmesg, and pstore logs", "log_analyzer", Icons.Filled.Monitor),
-                ToolItem("Kernel Crash Analyzer", "Parse last_kmsg and pstore ram-oops", "unified_analyzer/kernel_crash", Icons.Filled.BugReport),
+                ToolItem("Kernel Crash Analyzer", "Parse last_kmsg and pstore ram-oops", "kernel_crash_analyzer", Icons.Filled.BugReport),
             )
         ),
         ToolCategory(
             "Build & Compare Tools",
             listOf(
-                ToolItem("ROM Compare", "Compare added/removed files between ROMs", "rom_compare", Icons.Filled.CompareArrows),
+                ToolItem("ROM Compare", "Compare added/removed files between ROMs", "rom_compare", Icons.AutoMirrored.Filled.CompareArrows),
                 ToolItem("Compatibility Check", "Check Treble/ABI compatibility", "compatibility_check", Icons.Filled.DeveloperBoard),
                 ToolItem("Report Generator", "Generate markdown technical reports", "report_generator", Icons.Filled.Description),
                 ToolItem("ROM Builder", "Repack system and boot into flashable ZIP", "rom_builder", Icons.Filled.Build),

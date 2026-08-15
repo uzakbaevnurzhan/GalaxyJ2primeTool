@@ -124,7 +124,7 @@ fun HashCalculatorScreen(navController: NavController, viewModel: HashCalculator
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isCalculating) {
-            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
             Text("Processing...", style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.CenterHorizontally))
         }

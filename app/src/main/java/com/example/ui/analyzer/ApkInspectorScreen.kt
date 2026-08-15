@@ -85,10 +85,12 @@ class ApkInspectorViewModel : ViewModel() {
                     val packageInfo = pm.getPackageArchiveInfo(tempFile!!.absolutePath, flags)
                         ?: throw Exception("Could not parse APK information (is it a valid APK?)")
                     
+                    val versionCodeLong = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(packageInfo)
+                    
                     ApkInfoResult(
                         packageName = packageInfo.packageName,
                         versionName = packageInfo.versionName ?: "Unknown",
-                        versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) packageInfo.longVersionCode else packageInfo.versionCode.toLong(),
+                        versionCode = versionCodeLong,
                         permissions = packageInfo.requestedPermissions?.toList() ?: emptyList(),
                         activities = packageInfo.activities?.map { it.name } ?: emptyList(),
                         services = packageInfo.services?.map { it.name } ?: emptyList(),

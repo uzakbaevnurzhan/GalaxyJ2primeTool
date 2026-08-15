@@ -185,12 +185,12 @@ fun LogAnalyzerScreen(navController: NavController, viewModel: LogAnalyzerViewMo
                     }
                     items(lines.take(20)) { line -> // Show up to 20 lines per group to avoid lag
                         Text(text = line, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
-                        Divider()
+                        HorizontalDivider()
                     }
                     if (lines.size > 20) {
                         item {
                             Text(text = "... and ${lines.size - 20} more lines", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                            Divider()
+                            HorizontalDivider()
                         }
                     }
                 }

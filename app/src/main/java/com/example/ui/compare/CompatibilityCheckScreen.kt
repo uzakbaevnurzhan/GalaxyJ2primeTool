@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -224,7 +224,7 @@ fun CompatibilityCheckScreen(navController: NavController, viewModel: Compatibil
                                 CheckStatus.GOOD -> Icons.Filled.CheckCircle
                                 CheckStatus.WARNING -> Icons.Filled.Warning
                                 CheckStatus.ERROR -> Icons.Filled.Error
-                                CheckStatus.UNKNOWN -> Icons.Filled.Help
+                                CheckStatus.UNKNOWN -> Icons.AutoMirrored.Filled.Help
                             },
                             contentDescription = null,
                             tint = when (check.status) {
@@ -241,7 +241,7 @@ fun CompatibilityCheckScreen(navController: NavController, viewModel: Compatibil
                             Text(check.details, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    Divider()
+                    HorizontalDivider()
                 }
             }
         }
