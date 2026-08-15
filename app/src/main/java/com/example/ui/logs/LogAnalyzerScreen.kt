@@ -172,42 +172,6 @@ fun LogAnalyzerScreen(navController: NavController, viewModel: LogAnalyzerViewMo
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-
-            var aiAnalysis by remember { mutableStateOf<String?>(null) }
-            var isAiAnalyzing by remember { mutableStateOf(false) }
-            val coroutineScope = rememberCoroutineScope()
-
-            Button(
-                onClick = {
-                    isAiAnalyzing = true
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val assistant = com.example.ai.ROMAssistant()
-                        val sampleData = result.groupedErrors.values.flatten().take(50).joinToString("\n")
-                        val response = assistant.analyzeLog(sampleData, "Samsung Galaxy J2 Prime (SM-G532F)")
-                        withContext(Dispatchers.Main) {
-                            aiAnalysis = response
-                            isAiAnalyzing = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isAiAnalyzing
-            ) {
-                Text(if (isAiAnalyzing) "Analyzing with AI..." else "Explain with AI")
-            }
-
-            if (aiAnalysis != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("AI Analysis", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(aiAnalysis!!)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
             Text("Error Groups:", style = MaterialTheme.typography.titleMedium)
             LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 result.groupedErrors.forEach { (group, lines) ->

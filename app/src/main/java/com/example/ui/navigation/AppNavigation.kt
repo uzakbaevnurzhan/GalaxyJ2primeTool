@@ -1,5 +1,8 @@
 package com.example.ui.navigation
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.ui.analyzer.UnifiedAnalyzerScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -30,9 +33,7 @@ import com.example.ui.compare.CompatibilityCheckScreen
 import com.example.ui.builder.ROMBuilderScreen
 import com.example.ui.device.DeviceInfoScreen
 import com.example.ui.projects.ProjectsScreen
-import com.example.ui.github.GitHubScreen
 import com.example.ui.tools.ToolsScreen
-import com.example.ui.webview.WebViewScreen
 import com.example.ui.settings.SettingsScreen
 
 sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -97,9 +98,23 @@ fun AppNavigation() {
             composable("compatibility_check") { CompatibilityCheckScreen(navController) }
             composable("rom_builder") { ROMBuilderScreen(navController) }
             composable("device_info") { DeviceInfoScreen(navController) }
+            composable("hash_calculator") { com.example.ui.tools.HashCalculatorScreen(navController) }
+            composable("buildprop_analyzer") { com.example.ui.analyzer.BuildPropAnalyzerScreen(navController) }
+            composable("apk_inspector") { com.example.ui.analyzer.ApkInspectorScreen(navController) }
+            composable("init_analyzer") { com.example.ui.analyzer.InitScriptAnalyzerScreen(navController) }
+            composable("fstab_analyzer") { com.example.ui.analyzer.FstabAnalyzerScreen(navController) }
+            composable("file_explorer") { com.example.ui.explorer.FileExplorerScreen(navController) }
+            composable("report_generator") { com.example.ui.tools.ReportGeneratorScreen(navController) }
+            
+            composable(
+                route = "unified_analyzer/{toolType}",
+                arguments = listOf(navArgument("toolType") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val toolType = backStackEntry.arguments?.getString("toolType") ?: "unknown"
+                UnifiedAnalyzerScreen(navController, toolType)
+            }
+            
             composable(Screen.Projects.route) { ProjectsScreen(navController) }
-            composable("github") { GitHubScreen(navController) }
-            composable("webview") { WebViewScreen(navController) }
             composable(Screen.Settings.route) { SettingsScreen(navController) }
         }
     }

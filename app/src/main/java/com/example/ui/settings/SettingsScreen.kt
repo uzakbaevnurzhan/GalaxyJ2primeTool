@@ -13,10 +13,7 @@ import androidx.navigation.NavController
 @Composable
 fun SettingsScreen(navController: NavController) {
     var isDarkTheme by remember { mutableStateOf(true) }
-    var aiEnabled by remember { mutableStateOf(true) }
     var askBeforeModify by remember { mutableStateOf(true) }
-    var githubUrl by remember { mutableStateOf("https://github.com/") }
-    var websiteUrl by remember { mutableStateOf("https://uzakbaevnurzhan.github.io/") }
     var maxArchiveSize by remember { mutableStateOf("2048") }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -39,32 +36,6 @@ fun SettingsScreen(navController: NavController) {
                 value = maxArchiveSize,
                 onValueChange = { maxArchiveSize = it },
                 label = { Text("Maximum archive size (MB)") },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            )
-        }
-
-        item { SettingsSectionTitle("AI Assistant") }
-        item {
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Enable AI Assistant")
-                Switch(checked = aiEnabled, onCheckedChange = { aiEnabled = it })
-            }
-        }
-
-        item { SettingsSectionTitle("Integrations") }
-        item {
-            OutlinedTextField(
-                value = githubUrl,
-                onValueChange = { githubUrl = it },
-                label = { Text("GitHub Repository URL") },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = websiteUrl,
-                onValueChange = { websiteUrl = it },
-                label = { Text("Website URL") },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         }
