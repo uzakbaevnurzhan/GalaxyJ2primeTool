@@ -40,7 +40,24 @@ class FileExplorerViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _fileStates = MutableStateFlow<Map<String, com.example.ui.explorer.ExplorerFileState>>(emptyMap())
+    val fileStates: StateFlow<Map<String, com.example.ui.explorer.ExplorerFileState>> = _fileStates
+    
+    fun setFileStates(states: Map<String, com.example.ui.explorer.ExplorerFileState>) {
+        _fileStates.value = states
+    }
+    
+
     private val stack = mutableListOf<DocumentFile>()
+
+    fun setRootDirectoryPath(path: String) {
+        val root = DocumentFile.fromFile(java.io.File(path))
+        if (root != null && root.isDirectory) {
+            stack.clear()
+            stack.add(root)
+            loadDirectory(root)
+        }
+    }
 
     fun setRootDirectory(uri: Uri, context: android.content.Context) {
         val root = DocumentFile.fromTreeUri(context, uri)
@@ -80,12 +97,44 @@ class FileExplorerViewModel : ViewModel() {
 }
 
 @Composable
-fun FileExplorerScreen(navController: NavController, viewModel: FileExplorerViewModel = viewModel()) {
+fun FileExplorerScreen(navController: NavController, initialPath: String? = null, viewModel: FileExplorerViewModel = viewModel()) {
     val context = LocalContext.current
     val currentDir by viewModel.currentDir.collectAsState()
     val files by viewModel.files.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val fileStates by viewModel.fileStates.collectAsState()
 
+    
+    LaunchedEffect(initialPath) {
+        if (initialPath != null) {
+            viewModel.setRootDirectoryPath(initialPath)
+            if (initialPath.contains("rom_studio")) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val parts = initialPath.split("/")
+                        val idx = parts.indexOf("rom_studio")
+                        if (idx != -1 && idx + 1 < parts.size) {
+                            val projectId = parts[idx + 1]
+                            val rootPath = java.io.File(context.filesDir, "rom_studio/$projectId").absolutePath
+                            val project = com.example.ui.studio.workspace.WorkspaceManager.loadProject(rootPath)
+                            if (project != null) {
+                                val changes = com.example.ui.studio.workspace.WorkspaceTracker.getChanges(project)
+                                val states = changes.mapValues {
+                                    when (it.value) {
+                                        com.example.ui.studio.workspace.FileState.ADDED -> com.example.ui.explorer.ExplorerFileState.ADDED
+                                        com.example.ui.studio.workspace.FileState.MODIFIED -> com.example.ui.explorer.ExplorerFileState.MODIFIED
+                                        com.example.ui.studio.workspace.FileState.DELETED -> com.example.ui.explorer.ExplorerFileState.DELETED
+                                        else -> com.example.ui.explorer.ExplorerFileState.UNCHANGED
+                                    }
+                                }
+                                viewModel.setFileStates(states)
+                            }
+                        }
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
+            }
+        }
+    }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
         uri?.let { viewModel.setRootDirectory(it, context) }
     }
@@ -138,7 +187,37 @@ fun FileExplorerScreen(navController: NavController, viewModel: FileExplorerView
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
-                                    Text(file.name ?: "Unknown", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(file.name ?: "Unknown", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                        
+                                        // Match relative path
+                                        val filePathStr = file.uri.path ?: ""
+                                        val matchPath = if (filePathStr.contains("/workspace/")) {
+                                            filePathStr.substringAfter("/workspace/")
+                                        } else {
+                                            file.name ?: ""
+                                        }
+                                        val state = fileStates[matchPath]
+                                        if (state != null && state != com.example.ui.explorer.ExplorerFileState.UNCHANGED) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Surface(
+                                                color = when (state) {
+                                                    com.example.ui.explorer.ExplorerFileState.ADDED -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                                    com.example.ui.explorer.ExplorerFileState.MODIFIED -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+                                                    com.example.ui.explorer.ExplorerFileState.DELETED -> androidx.compose.ui.graphics.Color(0xFFF44336)
+                                                    else -> androidx.compose.ui.graphics.Color.Transparent
+                                                },
+                                                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = state.name,
+                                                    color = androidx.compose.ui.graphics.Color.White,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                     if (!file.isDirectory) {
                                         Text(
                                             text = Formatter.formatFileSize(context, file.length()),

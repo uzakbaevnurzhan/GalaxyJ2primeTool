@@ -15,9 +15,9 @@ class FlashPrecheckTest {
 
     @Test
     fun testImageMatcherFuzzy() {
-        val bootFile = tempFolder.newFile("boot_lineage_18.1_g532f.img")
-        val systemFile = tempFolder.newFile("system.img.ext4")
-        val recoveryFile = tempFolder.newFile("twrp-3.7.0_9-0-g532f.img")
+        val bootFile = tempFolder.newFile("boot_lineage_18.1_g532f.img").apply { writeBytes(ByteArray(1024)) }
+        val systemFile = tempFolder.newFile("system.img.ext4").apply { writeBytes(ByteArray(1024)) }
+        val recoveryFile = tempFolder.newFile("twrp-3.7.0_9-0-g532f.img").apply { writeBytes(ByteArray(1024)) }
 
         val partitions = listOf(
             PartitionEntry(index = 1, name = "boot", sizeBytes = 32L * 1024 * 1024),

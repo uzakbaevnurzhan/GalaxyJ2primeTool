@@ -176,7 +176,8 @@ class BootAnalyzerEngineTest {
             kernelVersionString = "Linux version 3.18.140",
             compilerString = "gcc version 4.9",
             isSmp = true,
-            kernelConfigCount = 120
+            kernelConfigCount = 120,
+            kernelSize = 12000000
         )
 
         val issues = BootIssueDetector.detectAllIssues(

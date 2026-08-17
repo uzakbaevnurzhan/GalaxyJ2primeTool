@@ -546,7 +546,7 @@ private fun CrashEventCard(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
                             .padding(6.dp)
                     ) {
                         event.stackFrames.take(4).forEach { frame ->
@@ -630,7 +630,7 @@ private fun CallTracesTab(report: KernelCrashReport) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.Black.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
                                 .padding(8.dp)
                         ) {
                             grp.sampleEvent.stackFrames.forEach { frame ->
@@ -738,7 +738,7 @@ private fun RawContextTab(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.04f))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
                             .padding(6.dp)
                     ) {
                         selectedEvent.contextLinesBefore.forEach {

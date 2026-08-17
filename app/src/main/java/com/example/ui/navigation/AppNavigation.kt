@@ -34,6 +34,14 @@ import com.example.ui.builder.ROMBuilderScreen
 import com.example.ui.device.DeviceInfoScreen
 import com.example.ui.projects.ProjectsScreen
 import com.example.ui.tools.ToolsScreen
+import com.example.ui.studio.ui.RomStudioScreen
+import com.example.ui.studio.ui.RomWorkspaceScreen
+import com.example.ui.studio.ui.SnapshotManagerScreen
+import com.example.ui.compare.RomMergeScreen
+import com.example.ui.tools.GlobalSearchScreen
+import com.example.ui.tools.TaskCenterScreen
+import com.example.ui.tools.ErrorCenterScreen
+import com.example.ui.tools.ReportGeneratorScreen
 import com.example.ui.settings.SettingsScreen
 
 sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -97,8 +105,45 @@ fun AppNavigation() {
             composable(Screen.Logs.route) { LogAnalyzerScreen(navController) }
             composable("rom_compare") { ROMCompareScreen(navController) }
             composable("compatibility_check") { CompatibilityCheckScreen(navController) }
-            composable("rom_builder") { ROMBuilderScreen(navController) }
+            composable("rom_patcher") { com.example.patcher.ui.RomPatcherScreen(navController) }
+            composable("rom_patcher/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId")
+                com.example.patcher.ui.RomPatcherScreen(navController, projectId)
+            }
+            composable("rom_builder") { 
+                ROMBuilderScreen(navController) 
+            }
+            composable("rom_build") { 
+                ROMBuilderScreen(navController) 
+            }
+            composable("rom_build/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId")
+                ROMBuilderScreen(navController, projectId)
+            }
+            composable("global_search") { GlobalSearchScreen(navController) }
+            composable("task_center") { TaskCenterScreen(navController) }
+            composable("error_center") { ErrorCenterScreen(navController) }
+            composable("rom_merge") { RomMergeScreen(navController) }
+            composable("rom_merge/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId")
+                RomMergeScreen(navController, projectId)
+            }
+            composable("snapshot_manager") { SnapshotManagerScreen(navController) }
+            composable("snapshot_manager/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
+                SnapshotManagerScreen(navController, projectId)
+            }
+            composable("rom_studio") { RomStudioScreen(navController) }
+            composable("rom_workspace/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
+                RomWorkspaceScreen(navController, projectId)
+            }
             composable("device_info") { DeviceInfoScreen(navController) }
+            composable("root_center") { com.example.ui.root.RootCenterScreen(navController) }
+            composable("adb_fastboot") { com.example.ui.adb.AdbFastbootScreen(navController) }
+            composable("usb_host_center") { com.example.ui.usb.UsbHostCenterScreen(navController) }
+            composable("boot_diagnostic") { com.example.ui.diagnostic.BootDiagnosticScreen(navController) }
+            composable("build_tool_registry") { com.example.ui.tools.BuildToolRegistryScreen(navController) }
             composable("hash_calculator") { com.example.ui.tools.HashCalculatorScreen(navController) }
             composable("buildprop_analyzer") { com.example.ui.analyzer.getprop.ui.GetpropAnalyzerScreen(navController) }
             composable("getprop_analyzer") { com.example.ui.analyzer.getprop.ui.GetpropAnalyzerScreen(navController) }
@@ -106,13 +151,23 @@ fun AppNavigation() {
             composable("init_analyzer") { com.example.ui.analyzer.InitScriptAnalyzerScreen(navController) }
             composable("fstab_analyzer") { com.example.ui.analyzer.FstabAnalyzerScreen(navController) }
             composable("file_explorer") { com.example.ui.explorer.FileExplorerScreen(navController) }
+            composable("file_explorer/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId")
+                val path = if (projectId != null) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    java.io.File(context.filesDir, "rom_studio/$projectId/workspace").absolutePath
+                } else null
+                com.example.ui.explorer.FileExplorerScreen(navController, initialPath = path)
+            }
             composable("report_generator") { com.example.ui.tools.ReportGeneratorScreen(navController) }
             composable("elf_analyzer") { com.example.ui.analyzer.elf.ui.ElfAnalyzerScreen(navController) }
             composable("dat_analyzer") { com.example.ui.analyzer.dat.DatAnalyzerScreen(navController) }
             composable("selinux_analyzer") { com.example.ui.analyzer.selinux.ui.SelinuxAnalyzerScreen(navController) }
             composable("kernel_crash_analyzer") { com.example.ui.analyzer.kernel.ui.KernelCrashAnalyzerScreen(navController) }
+            composable("kernel_studio") { com.example.ui.analyzer.kernel.studio.ui.KernelStudioScreen(navController) }
             composable("partition_analyzer") { com.example.ui.analyzer.partition.ui.PartitionAnalyzerScreen(navController) }
             composable("flash_precheck") { com.example.ui.analyzer.flash.ui.FlashPrecheckScreen(navController) }
+            composable("vendor_analyzer") { com.example.ui.analyzer.vendor.ui.VendorHalRilScreen(navController) }
             
             composable(
                 route = "unified_analyzer/{toolType}",
