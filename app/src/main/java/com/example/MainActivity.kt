@@ -17,11 +17,7 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       MyApplicationTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-          androidx.compose.foundation.layout.Box(modifier = Modifier.padding(innerPadding)) {
-             AppNavigation()
-          }
-        }
+        AppNavigation()
       }
     }
   }

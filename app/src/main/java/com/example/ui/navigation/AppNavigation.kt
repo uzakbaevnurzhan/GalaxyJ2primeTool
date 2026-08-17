@@ -168,6 +168,8 @@ fun AppNavigation() {
             composable("partition_analyzer") { com.example.ui.analyzer.partition.ui.PartitionAnalyzerScreen(navController) }
             composable("flash_precheck") { com.example.ui.analyzer.flash.ui.FlashPrecheckScreen(navController) }
             composable("vendor_analyzer") { com.example.ui.analyzer.vendor.ui.VendorHalRilScreen(navController) }
+            composable("samsung_firmware") { com.example.ui.samsung.SamsungFirmwareScreen(navController) }
+            composable("boot_modes") { com.example.ui.root.BootModesScreen(navController) }
             
             composable(
                 route = "unified_analyzer/{toolType}",

@@ -7,24 +7,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
+import com.example.data.model.AndroidVersionInfo
+import com.example.ui.common.AppTopBar
 import com.example.ui.studio.rom.RomOperationResult
 import com.example.ui.studio.rom.RomUnpackEngine
 import com.example.ui.studio.workspace.RomProject
 import com.example.ui.studio.workspace.WorkspaceManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +38,8 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
     var unpackProgress by remember { mutableStateOf(0f) }
     var unpackStatus by remember { mutableStateOf("") }
     var unpackError by remember { mutableStateOf<String?>(null) }
+
+    var showMenu by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -68,13 +71,50 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
         project = WorkspaceManager.loadProject(rootPath)
     }
 
+    val targetVerInfo = remember(project) {
+        project?.let { AndroidVersionInfo.fromProjectTarget(it.androidVersion) }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(project?.name ?: "Loading...") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            AppTopBar(
+                title = project?.name ?: "Project Workspace",
+                subtitle = project?.let { "${it.device} • Target: ${it.androidVersion} [${targetVerInfo?.source?.displayName}]" } ?: "Loading...",
+                onNavigateBack = { navController.popBackStack() },
+                actions = {
+                    IconButton(onClick = { navController.navigate("global_search") }) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search Project")
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "Options")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Snapshot Manager") },
+                                leadingIcon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    navController.navigate("snapshot_manager/$projectId")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("ROM Patcher") },
+                                leadingIcon = { Icon(Icons.Filled.AutoFixHigh, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    navController.navigate("rom_patcher/$projectId")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("ROM Merge & Diff") },
+                                leadingIcon = { Icon(Icons.Filled.CallMerge, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    navController.navigate("rom_merge/$projectId")
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -88,16 +128,16 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            // Dashboard Cards
+            // Dashboard Action Cards
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DashboardCard(
-                    title = "IMPORT",
+                    title = "IMPORT ROM",
                     icon = Icons.Filled.Input,
                     modifier = Modifier.weight(1f),
                     onClick = { filePicker.launch("*/*") }
                 )
                 DashboardCard(
-                    title = "WORKSPACE",
+                    title = "FILE EXPLORER",
                     icon = Icons.Filled.Folder,
                     modifier = Modifier.weight(1f),
                     onClick = { navController.navigate("file_explorer/$projectId") }
@@ -106,7 +146,7 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DashboardCard(
-                    title = "VALIDATE",
+                    title = "VALIDATE ROM",
                     icon = Icons.Filled.CheckCircle,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -129,9 +169,9 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isUnpacking) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Operation in progress", style = MaterialTheme.typography.titleMedium)
+                        Text("Operation in progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(progress = { unpackProgress }, modifier = Modifier.fillMaxWidth())
                         Spacer(modifier = Modifier.height(8.dp))
@@ -144,24 +184,44 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
             if (unpackError != null) {
                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Operation Failed", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text("Operation Failed", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
                         Text(unpackError!!, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Text("Project Structure", style = MaterialTheme.typography.titleMedium)
+            Text("Project Structure", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            
+
             val workspaceDir = File(project!!.rootPath, "workspace")
             val files = workspaceDir.listFiles()?.toList() ?: emptyList()
             if (files.isEmpty()) {
-                Text("Workspace is empty. Import a ROM to begin.")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Box(modifier = Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Filled.FolderOpen, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.outline)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Workspace is empty. Click 'IMPORT ROM' to unpack a ROM.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             } else {
-                LazyColumn {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(files) { file ->
-                        Text(file.name)
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(if (file.isDirectory) Icons.Filled.Folder else Icons.Filled.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(10.dp))
+                                Text(file.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
@@ -171,11 +231,15 @@ fun RomWorkspaceScreen(navController: NavController, projectId: String) {
 
 @Composable
 fun DashboardCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(modifier = modifier.clickable(onClick = onClick)) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, style = MaterialTheme.typography.labelLarge)
+            Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }

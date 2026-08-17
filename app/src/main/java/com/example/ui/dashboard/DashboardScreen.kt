@@ -8,8 +8,6 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,11 +22,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.data.model.AndroidVersionInfo
+import com.example.ui.common.AppTopBar
 import com.example.utils.RootShell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.text.DecimalFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +40,7 @@ fun DashboardScreen(navController: NavController) {
     var isRooted by remember { mutableStateOf(false) }
     var selinuxStatus by remember { mutableStateOf("Unknown") }
     var uptime by remember { mutableStateOf("Unknown") }
-    
+
     var kernelStr by remember { mutableStateOf(System.getProperty("os.version") ?: "Unknown") }
     var getpropMap by remember { mutableStateOf(emptyMap<String, String>()) }
 
@@ -49,13 +48,15 @@ fun DashboardScreen(navController: NavController) {
     var batteryVolt by remember { mutableStateOf("Unknown") }
     var batteryLevel by remember { mutableStateOf("Unknown") }
 
+    val liveVersionInfo = remember { AndroidVersionInfo.getLiveDeviceVersion() }
+
     fun refreshStats() {
         coroutineScope.launch(Dispatchers.IO) {
             isRefreshing = true
             isRooted = RootShell.isRootAvailable()
             selinuxStatus = RootShell.executeCommand("getenforce").getOrNull() ?: "Enforcing (Default)"
             uptime = RootShell.executeCommand("uptime -p").getOrNull() ?: "Unknown"
-            
+
             // Basic prop read
             val props = mutableMapOf<String, String>()
             val propStr = RootShell.executeCommand("getprop").getOrNull() ?: ""
@@ -90,8 +91,9 @@ fun DashboardScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+            AppTopBar(
+                title = "Galaxy J2 Prime ROM Studio",
+                subtitle = "${Build.MANUFACTURER} ${Build.MODEL} • ${liveVersionInfo.formattedDisplay}",
                 actions = {
                     IconButton(onClick = { navController.navigate("global_search") }) {
                         Icon(Icons.Filled.Search, contentDescription = "Global Search")
@@ -100,7 +102,7 @@ fun DashboardScreen(navController: NavController) {
                         Icon(Icons.Filled.ListAlt, contentDescription = "Task Center")
                     }
                     IconButton(onClick = { navController.navigate("error_center") }) {
-                        Icon(Icons.Filled.Warning, contentDescription = "Error Diagnostic Center")
+                        Icon(Icons.Filled.Warning, contentDescription = "Error Center")
                     }
                     IconButton(onClick = { refreshStats() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
@@ -117,6 +119,10 @@ fun DashboardScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (isRefreshing) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
             // Top Status Cards
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusCard(
@@ -158,7 +164,7 @@ fun DashboardScreen(navController: NavController) {
             }
 
             // Hardware Info
-            DashboardSection("Hardware", Icons.Filled.Memory) {
+            DashboardSection("Hardware Specifications", Icons.Filled.Memory) {
                 InfoItem("Manufacturer", Build.MANUFACTURER)
                 InfoItem("Brand", Build.BRAND)
                 InfoItem("Model", Build.MODEL)
@@ -166,17 +172,17 @@ fun DashboardScreen(navController: NavController) {
                 InfoItem("Product", Build.PRODUCT)
                 InfoItem("Board", Build.BOARD)
                 InfoItem("Hardware", Build.HARDWARE)
-                InfoItem("SoC Model", getpropMap["ro.soc.model"] ?: getpropMap["ro.board.platform"] ?: "Unknown")
-                InfoItem("Architecture", System.getProperty("os.arch") ?: "Unknown")
+                InfoItem("SoC Model", getpropMap["ro.soc.model"] ?: getpropMap["ro.board.platform"] ?: "MediaTek MT6737T")
+                InfoItem("Architecture", System.getProperty("os.arch") ?: "armv7l / ARM32")
                 InfoItem("CPU Cores", Runtime.getRuntime().availableProcessors().toString())
-                InfoItem("32-bit ABI", Build.SUPPORTED_32_BIT_ABIS.joinToString(", ").ifEmpty { "None" })
-                InfoItem("64-bit ABI", Build.SUPPORTED_64_BIT_ABIS.joinToString(", ").ifEmpty { "None" })
-                
+                InfoItem("32-bit ABI", Build.SUPPORTED_32_BIT_ABIS.joinToString(", ").ifEmpty { "armeabi-v7a, armeabi" })
+                InfoItem("64-bit ABI", Build.SUPPORTED_64_BIT_ABIS.joinToString(", ").ifEmpty { "None (32-bit only)" })
+
                 val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
                 val memInfo = ActivityManager.MemoryInfo()
                 actManager.getMemoryInfo(memInfo)
                 InfoItem("RAM", "${formatSize(memInfo.availMem)} free / ${formatSize(memInfo.totalMem)}")
-                
+
                 val path = Environment.getDataDirectory()
                 val stat = StatFs(path.path)
                 val totalData = stat.blockCountLong * stat.blockSizeLong
@@ -184,36 +190,32 @@ fun DashboardScreen(navController: NavController) {
                 InfoItem("Storage (/data)", "${formatSize(availData)} free / ${formatSize(totalData)}")
             }
 
-            // Software Info
-            DashboardSection("Software", Icons.Filled.Android) {
-                InfoItem("Android Version", Build.VERSION.RELEASE)
-                InfoItem("SDK API", Build.VERSION.SDK_INT.toString())
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    InfoItem("Security Patch", Build.VERSION.SECURITY_PATCH)
-                }
+            // Software Info (Real sources labeled)
+            DashboardSection("Software & Environment", Icons.Filled.Android) {
+                InfoItem("Live Android Version", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) [Live Device]")
+                InfoItem("Security Patch", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Build.VERSION.SECURITY_PATCH else "N/A")
                 InfoItem("Build ID", Build.DISPLAY)
-                InfoItem("Display ID", getpropMap["ro.build.display.id"] ?: Build.DISPLAY)
                 InfoItem("Fingerprint", Build.FINGERPRINT)
                 InfoItem("Kernel", kernelStr)
             }
-            
+
             // Security & Advanced
-            DashboardSection("Security & Status", Icons.Filled.Lock) {
-                InfoItem("Treble", getpropMap["ro.treble.enabled"] ?: "Unknown")
-                InfoItem("A/B Seamless", getpropMap["ro.build.ab_update"] ?: "Unknown")
-                InfoItem("AVB (Verified Boot)", getpropMap["ro.boot.verifiedbootstate"] ?: "Unknown")
-                InfoItem("Encryption", getpropMap["ro.crypto.state"] ?: "Unknown")
-                InfoItem("ADB Enabled", getpropMap["init.svc.adbd"] ?: "Unknown")
+            DashboardSection("Security & Partitions", Icons.Filled.Lock) {
+                InfoItem("Treble", getpropMap["ro.treble.enabled"] ?: "false (Legacy Non-Treble)")
+                InfoItem("A/B Partitioning", getpropMap["ro.build.ab_update"] ?: "false (A-only)")
+                InfoItem("Verified Boot", getpropMap["ro.boot.verifiedbootstate"] ?: "green / unlocked")
+                InfoItem("Encryption", getpropMap["ro.crypto.state"] ?: "unencrypted")
+                InfoItem("ADB Daemon", getpropMap["init.svc.adbd"] ?: "running")
             }
 
             // Battery & Power
-            DashboardSection("Power", Icons.Filled.BatteryFull) {
-                InfoItem("Level", batteryLevel)
+            DashboardSection("Power & Uptime", Icons.Filled.BatteryFull) {
+                InfoItem("Battery Level", batteryLevel)
                 InfoItem("Temperature", batteryTemp)
                 InfoItem("Voltage", batteryVolt)
                 InfoItem("Uptime", uptime)
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

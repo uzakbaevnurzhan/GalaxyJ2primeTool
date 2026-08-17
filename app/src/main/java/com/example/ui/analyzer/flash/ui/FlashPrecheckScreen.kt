@@ -7,7 +7,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -16,7 +15,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,6 +35,7 @@ import com.example.ui.analyzer.flash.*
 import com.example.ui.analyzer.partition.PartitionEntry
 import com.example.ui.analyzer.partition.PartitionIssue
 import com.example.ui.analyzer.partition.PartitionIssueSeverity
+import com.example.ui.common.AppTopBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -92,19 +91,19 @@ class FlashPrecheckViewModel : ViewModel() {
         viewModelScope.launch {
             _isAnalyzing.value = true
             withContext(Dispatchers.IO) {
-                // Create mock temporary image files matching typical Galaxy J2 Prime A11 ROM set
+                // Create lightweight placeholder references without huge heap allocations
                 val files = mutableListOf<File>()
                 val bootFile = File(context.cacheDir, "boot_a11_g532.img")
-                bootFile.writeBytes(ByteArray(14 * 1024 * 1024)) // 14MB
+                if (!bootFile.exists()) bootFile.writeBytes(ByteArray(1024))
 
                 val recoveryFile = File(context.cacheDir, "twrp_3.7_g532f.img")
-                recoveryFile.writeBytes(ByteArray(16 * 1024 * 1024)) // 16MB
+                if (!recoveryFile.exists()) recoveryFile.writeBytes(ByteArray(1024))
 
                 val systemFile = File(context.cacheDir, "system_a11_arm32.img")
-                systemFile.writeBytes(ByteArray(1800 * 1024 * 1024)) // 1.8GB (fits within 2.34GB system partition)
+                if (!systemFile.exists()) systemFile.writeBytes(ByteArray(1024))
 
                 val logoFile = File(context.cacheDir, "logo.bin")
-                logoFile.writeBytes(ByteArray(2 * 1024 * 1024)) // 2MB
+                if (!logoFile.exists()) logoFile.writeBytes(ByteArray(1024))
 
                 files.addAll(listOf(bootFile, recoveryFile, systemFile, logoFile))
                 _loadedFiles.value = files
@@ -121,21 +120,29 @@ class FlashPrecheckViewModel : ViewModel() {
     }
 
     private fun recalculate() {
-        val res = analyzer.performPrecheck(
-            partitionTable = null,
-            imageFiles = _loadedFiles.value,
-            targetProfile = _selectedProfile.value
-        )
-        _result.value = res
+        try {
+            val res = analyzer.performPrecheck(
+                partitionTable = null,
+                imageFiles = _loadedFiles.value,
+                targetProfile = _selectedProfile.value
+            )
+            _result.value = res
+        } catch (e: Exception) {
+            _result.value = null
+        }
     }
 
     private fun getFileNameFromUri(context: Context, uri: Uri): String {
         var name = "firmware_image.img"
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            if (nameIndex >= 0 && cursor.moveToFirst()) {
-                name = cursor.getString(nameIndex)
+        try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0 && cursor.moveToFirst()) {
+                    name = cursor.getString(nameIndex)
+                }
             }
+        } catch (e: Exception) {
+            // Fallback
         }
         return name
     }
@@ -163,36 +170,12 @@ fun FlashPrecheckScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (result == null) {
-            viewModel.loadSampleJ2PrimeFirmwareSet(context)
-        }
-    }
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "Flash Compatibility & Pre-Check",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            selectedProfile.marketingName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            AppTopBar(
+                title = "Safe Flash Pre-Check",
+                subtitle = "Target: ${selectedProfile.marketingName}",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = {
                         result?.let {
@@ -203,10 +186,7 @@ fun FlashPrecheckScreen(
                     }) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "Copy Report")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { padding ->
@@ -215,7 +195,7 @@ fun FlashPrecheckScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Profile & File Action Controls
+            // Profile & Action Buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -237,7 +217,13 @@ fun FlashPrecheckScreen(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("J2 Prime Preset")
+                    Text("Load Sample Set")
+                }
+
+                if (loadedFiles.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.clearFiles() }) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Clear Images", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
 
@@ -269,6 +255,43 @@ fun FlashPrecheckScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(16.dp))
                         Text("Verifying partition bounds & ROM compatibility...", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            } else if (loadedFiles.isEmpty()) {
+                // Empty state - safe and clean
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Filled.VerifiedUser, contentDescription = null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Safe Flash Pre-Check Ready", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "No images or partition tables currently loaded. Select firmware image files (boot.img, recovery.img, system.img) or load sample presets to verify flash compatibility against ${selectedProfile.modelName}.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { multiFilePicker.launch("*/*") }) {
+                                    Text("Select Images")
+                                }
+                                OutlinedButton(onClick = { viewModel.loadSampleJ2PrimeFirmwareSet(context) }) {
+                                    Text("Load Sample Set")
+                                }
+                            }
+                        }
                     }
                 }
             } else if (result != null) {

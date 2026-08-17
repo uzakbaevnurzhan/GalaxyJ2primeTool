@@ -108,8 +108,9 @@ fun ProjectsScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Project Manager", fontWeight = FontWeight.Bold) },
+            com.example.ui.common.AppTopBar(
+                title = "ROM Projects",
+                subtitle = "${projects.size} projects active",
                 actions = {
                     IconButton(onClick = { showDeviceImportDialog = true }) {
                         Icon(Icons.Filled.PhoneAndroid, contentDescription = "Import Device as Project", tint = MaterialTheme.colorScheme.primary)
