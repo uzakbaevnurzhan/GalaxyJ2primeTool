@@ -2,9 +2,9 @@ package com.example.ui.analyzer.selinux.engine
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.util.concurrent.TimeUnit
 
 sealed class RootCollectionResult {
     data class Success(val logs: String, val getenforce: String, val lineCount: Int) : RootCollectionResult()
@@ -19,12 +19,13 @@ object RootLogCollector {
     suspend fun isRootAvailable(): Boolean = withContext(Dispatchers.IO) {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            val finished = process.waitFor(3, TimeUnit.SECONDS)
-            if (!finished) {
+            val exitCode = withTimeoutOrNull(3000L) {
+                process.waitFor()
+            }
+            if (exitCode == null) {
                 process.destroy()
                 return@withContext false
             }
-            val exitCode = process.exitValue()
             if (exitCode == 0) {
                 val output = process.inputStream.bufferedReader().use { it.readText() }
                 return@withContext output.contains("uid=0")
@@ -46,7 +47,7 @@ object RootLogCollector {
 
             // 1. Get SELinux enforce status
             val getenforceProcess = Runtime.getRuntime().exec(arrayOf("su", "-c", "getenforce"))
-            getenforceProcess.waitFor(3, TimeUnit.SECONDS)
+            withTimeoutOrNull(3000L) { getenforceProcess.waitFor() }
             val enforceStatus = getenforceProcess.inputStream.bufferedReader().use { it.readText().trim() }
 
             // 2. Collect dmesg and logcat AVC logs
@@ -64,8 +65,7 @@ object RootLogCollector {
                 line = reader.readLine()
             }
 
-            logProcess.waitFor(10, TimeUnit.SECONDS)
-            val exitCode = logProcess.exitValue()
+            val exitCode = withTimeoutOrNull(10000L) { logProcess.waitFor() } ?: -1
 
             if (exitCode != 0 && count == 0) {
                 val errorOutput = logProcess.errorStream.bufferedReader().use { it.readText() }

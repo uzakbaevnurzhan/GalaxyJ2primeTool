@@ -18,8 +18,8 @@ android {
     applicationId = "com.aistudio.j2primeromstudio.abxy"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 3
+    versionName = "Beta 3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

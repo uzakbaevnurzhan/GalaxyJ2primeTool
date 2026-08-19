@@ -28,6 +28,7 @@ object GlobalSearchEngine {
 
         // 1. Search Tools
         val allTools = listOf(
+            SearchResult("Tools", "ROM Port Assistant", "8-phase Source ROM vs Target Device compatibility matrix & port plan", "rom_port_assistant"),
             SearchResult("Tools", "Root Center & Capabilities", "Verify root privileges & Magisk", "root_center"),
             SearchResult("Tools", "Device Center (Audit)", "16-category hardware & kernel specs", "device_info"),
             SearchResult("Tools", "ADB & Fastboot Studio", "Interactive terminal console", "adb_fastboot"),

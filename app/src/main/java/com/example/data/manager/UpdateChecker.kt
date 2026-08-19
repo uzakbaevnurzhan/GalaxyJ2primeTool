@@ -36,8 +36,8 @@ enum class UpdateErrorType {
 }
 
 object UpdateChecker {
-    val CURRENT_VERSION = "Beta4"
-    val CURRENT_BUILD_NUMBER = 4
+    val CURRENT_VERSION = "Beta 3"
+    val CURRENT_BUILD_NUMBER = 3
 
     // Ordered list of known release builds to query
     val KNOWN_RELEASES = listOf(

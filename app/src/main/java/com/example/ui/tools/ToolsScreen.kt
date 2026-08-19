@@ -45,8 +45,9 @@ fun ToolsScreen(navController: NavController) {
             )
         ),
         ToolCategory(
-            "ROM Studio & Patcher",
+            "ROM Studio & Porting",
             listOf(
+                ToolItem("ROM Port Assistant", "Comprehensive 8-phase ROM Porting matrix, ABI, kernel, partition & driver compatibility auditor", "rom_port_assistant", Icons.Filled.Transform),
                 ToolItem("ROM Patcher & Configuration", "Offline patcher for modifying build.prop, init.rc, XMLs, and binaries with rollback", "rom_patcher", Icons.Filled.BuildCircle),
                 ToolItem("ROM Build & Repack Studio", "Complete pipeline for validating, compiling partitions, and assembling flashable ROMs", "rom_builder", Icons.Filled.BuildCircle),
                 ToolItem("ROM Studio Workspace", "Offline environment for unpacking, modifying and repacking ROMs", "rom_studio", Icons.Filled.Build)

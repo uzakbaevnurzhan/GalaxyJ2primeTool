@@ -88,7 +88,7 @@ class FileExplorerViewModel : ViewModel() {
 
     fun navigateUp(): Boolean {
         if (stack.size > 1) {
-            stack.removeLast()
+            stack.removeAt(stack.lastIndex)
             loadDirectory(stack.last())
             return true
         }

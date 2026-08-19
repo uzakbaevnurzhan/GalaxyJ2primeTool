@@ -193,12 +193,14 @@ enum class ReportType {
     ROOT_REPORT,
     USB_REPORT,
     ADB_REPORT,
-    SAMSUNG_REPORT
+    SAMSUNG_REPORT,
+    ROM_PORT_REPORT
 }
 
 @Serializable
 enum class ReportFormat {
     MARKDOWN,
     TXT,
-    JSON
+    JSON,
+    CSV
 }

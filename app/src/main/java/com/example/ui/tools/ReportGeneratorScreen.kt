@@ -46,6 +46,7 @@ fun ReportGeneratorScreen(navController: NavController) {
             ReportFormat.JSON -> "application/json"
             ReportFormat.TXT -> "text/plain"
             ReportFormat.MARKDOWN -> "text/markdown"
+            ReportFormat.CSV -> "text/csv"
         }
     )) { uri: Uri? ->
         uri?.let {
@@ -191,6 +192,7 @@ fun ReportGeneratorScreen(navController: NavController) {
                                 ReportFormat.JSON -> "json"
                                 ReportFormat.TXT -> "txt"
                                 ReportFormat.MARKDOWN -> "md"
+                                ReportFormat.CSV -> "csv"
                             }
                             exportLauncher.launch("${selectedType.name}_${System.currentTimeMillis()}.$ext")
                         },

@@ -19,6 +19,7 @@ object ReportGeneratorEngine {
 
     data class ReportData(
         val reportType: String,
+        val appVersion: String = "Beta 3",
         val generatedAt: String,
         val projectName: String,
         val device: String,
@@ -96,6 +97,11 @@ object ReportGeneratorEngine {
                 sections["Samsung Odin Specification"] = "TAR/MD5 unpack & repack validator with PIT partition table alignment check"
                 sections["Odin Protocols"] = "Loke / Odin Download mode flashing parameters"
             }
+            ReportType.ROM_PORT_REPORT -> {
+                sections["ROM Port Assistant Engine"] = "ROM Porting Matrix, Architecture & Subsystem Compatibility Analysis"
+                sections["Target Device Baseline"] = "Samsung Galaxy J2 Prime (SM-G532F/G/M / MT6737T Cortex-A53 32-bit)"
+                sections["Porting Readiness Rules"] = "ABI verification, Kernel Binder IPC, Partition Budgets, MediaTek Mali-T720 HALs, SEC RIL"
+            }
         }
 
         // Add any custom details
@@ -126,12 +132,46 @@ object ReportGeneratorEngine {
             ReportFormat.JSON -> json.encodeToString(reportData)
             ReportFormat.TXT -> formatAsTxt(reportData)
             ReportFormat.MARKDOWN -> formatAsMarkdown(reportData)
+            ReportFormat.CSV -> formatAsCsv(reportData)
+        }
+    }
+
+    private fun formatAsCsv(data: ReportData): String = buildString {
+        appendLine("Section,Key,Value,Details")
+        appendLine("\"Metadata\",\"BETA VERSION\",\"Beta 3\",\"\"")
+        appendLine("\"Metadata\",\"Report Type\",\"${data.reportType}\",\"\"")
+        appendLine("\"Metadata\",\"Project\",\"${data.projectName.replace("\"", "\"\"")}\",\"\"")
+        appendLine("\"Metadata\",\"Generated At\",\"${data.generatedAt}\",\"\"")
+        appendLine("\"Metadata\",\"Device\",\"${data.manufacturer} ${data.device} (${data.brand})\",\"\"")
+        appendLine("\"Metadata\",\"Android Version\",\"${data.androidVersion}\",\"API ${data.sdkInt}\"")
+        appendLine("\"Metadata\",\"Primary ABI\",\"${data.primaryAbi}\",\"\"")
+        appendLine("\"Metadata\",\"SELinux\",\"${data.selinuxStatus}\",\"\"")
+        
+        data.sections.forEach { (sectionTitle, sectionContent) ->
+            sectionContent.lines().filter { it.isNotBlank() }.forEach { line ->
+                val parts = line.split(":", limit = 2)
+                if (parts.size == 2) {
+                    val k = parts[0].trim().replace("\"", "\"\"")
+                    val v = parts[1].trim().replace("\"", "\"\"")
+                    appendLine("\"${sectionTitle.replace("\"", "\"\"")}\",\"$k\",\"$v\",\"\"")
+                } else {
+                    val raw = line.trim().replace("\"", "\"\"")
+                    appendLine("\"${sectionTitle.replace("\"", "\"\"")}\",\"Item\",\"$raw\",\"\"")
+                }
+            }
+        }
+        data.warnings.forEach { warning ->
+            appendLine("\"Warnings\",\"Warning\",\"${warning.replace("\"", "\"\"")}\",\"\"")
+        }
+        data.errors.forEach { error ->
+            appendLine("\"Errors\",\"Error\",\"${error.replace("\"", "\"\"")}\",\"\"")
         }
     }
 
     private fun formatAsMarkdown(data: ReportData): String = buildString {
         appendLine("# ${data.reportType.replace("_", " ")}")
         appendLine()
+        appendLine("**Tool Version:** ${data.appVersion}  ")
         appendLine("**Project:** ${data.projectName}  ")
         appendLine("**Date:** ${data.generatedAt}  ")
         appendLine("**Device:** ${data.manufacturer} ${data.modelName(data.device)} (${data.brand})  ")
@@ -168,6 +208,7 @@ object ReportGeneratorEngine {
         appendLine("==================================================")
         appendLine(" ${data.reportType.replace("_", " ")}")
         appendLine("==================================================")
+        appendLine("Tool Version:    ${data.appVersion}")
         appendLine("Project:         ${data.projectName}")
         appendLine("Date:            ${data.generatedAt}")
         appendLine("Device:          ${data.manufacturer} ${data.device} (${data.brand})")

@@ -370,7 +370,7 @@ fun SettingsScreen(navController: NavController) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Galaxy J2 Prime ROM Studio", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Text("Version: Beta4 (v1.0-beta4)", style = MaterialTheme.typography.bodySmall)
+                        Text("Version: Beta 3 (v1.0-beta3)", style = MaterialTheme.typography.bodySmall)
                         Text("Min SDK: 24 (Android 7.0) • Target SDK: 36", style = MaterialTheme.typography.bodySmall)
                         Text("Host Architecture: ${System.getProperty("os.arch")} (${Build.SUPPORTED_ABIS.firstOrNull()})", style = MaterialTheme.typography.bodySmall)
                         Text("Developer: uzakbaevnurzhan", style = MaterialTheme.typography.bodySmall)

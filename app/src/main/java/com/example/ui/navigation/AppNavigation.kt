@@ -43,6 +43,7 @@ import com.example.ui.tools.TaskCenterScreen
 import com.example.ui.tools.ErrorCenterScreen
 import com.example.ui.tools.ReportGeneratorScreen
 import com.example.ui.settings.SettingsScreen
+import com.example.ui.porting.RomPortAssistantScreen
 
 sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Dashboard : Screen("dashboard", "Dashboard", Icons.Filled.Dashboard)
@@ -170,6 +171,11 @@ fun AppNavigation() {
             composable("vendor_analyzer") { com.example.ui.analyzer.vendor.ui.VendorHalRilScreen(navController) }
             composable("samsung_firmware") { com.example.ui.samsung.SamsungFirmwareScreen(navController) }
             composable("boot_modes") { com.example.ui.root.BootModesScreen(navController) }
+            composable("rom_port_assistant") { RomPortAssistantScreen(navController) }
+            composable("rom_port_assistant/{sessionId}") { backStackEntry ->
+                val sessionId = backStackEntry.arguments?.getString("sessionId")
+                RomPortAssistantScreen(navController, sessionId)
+            }
             
             composable(
                 route = "unified_analyzer/{toolType}",

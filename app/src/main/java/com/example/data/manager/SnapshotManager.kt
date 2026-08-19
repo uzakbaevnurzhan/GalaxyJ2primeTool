@@ -95,6 +95,25 @@ object SnapshotManager {
         }?.sortedByDescending { it.timestamp } ?: emptyList()
     }
 
+    suspend fun getAllSnapshots(context: Context): List<DeviceSnapshot> = withContext(Dispatchers.IO) {
+        val rootDir = File(context.filesDir, "rom_studio")
+        if (!rootDir.exists()) return@withContext emptyList()
+        val all = mutableListOf<DeviceSnapshot>()
+        rootDir.listFiles()?.forEach { projDir ->
+            val snapDir = File(projDir, "snapshots")
+            if (snapDir.exists() && snapDir.isDirectory) {
+                snapDir.listFiles { f -> f.extension == "json" }?.forEach { f ->
+                    try {
+                        all.add(json.decodeFromString<DeviceSnapshot>(f.readText()))
+                    } catch (e: Exception) {
+                        // ignore malformed
+                    }
+                }
+            }
+        }
+        all.sortedByDescending { it.timestamp }
+    }
+
     fun compareSnapshots(before: DeviceSnapshot, after: DeviceSnapshot): SnapshotDiff {
         // Properties diff
         val allPropKeys = before.systemProperties.keys + after.systemProperties.keys
