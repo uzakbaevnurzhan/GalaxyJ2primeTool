@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "J2 Prime ROM Studio"
+rootProject.name = "Galaxy J2 Prime Tool"
 
 include(":app")

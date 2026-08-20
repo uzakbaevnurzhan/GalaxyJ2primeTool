@@ -107,8 +107,8 @@ fun GlobalSearchScreen(navController: NavController) {
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 val catIcon = when (item.category) {
                                     "Tools" -> Icons.Filled.Build
-                                    "Projects" -> Icons.Filled.Folder
-                                    "Files" -> Icons.Filled.InsertDriveFile
+                                    "Analyzers" -> Icons.Filled.Troubleshoot
+                                    "Files" -> Icons.Filled.Description
                                     "Tasks" -> Icons.Filled.TaskAlt
                                     "Errors" -> Icons.Filled.BugReport
                                     else -> Icons.Filled.Search

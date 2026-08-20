@@ -5,15 +5,19 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,9 +27,9 @@ import com.example.data.manager.*
 import com.example.ui.analyzer.flash.DeviceProfile
 import com.example.ui.analyzer.partition.PartitionEntry
 import com.example.ui.common.AppTopBar
+import com.example.utils.RootShell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,19 +50,22 @@ fun SettingsScreen(navController: NavController) {
     var showUpdateDialog by remember { mutableStateOf(false) }
 
     var cacheSizeBytes by remember { mutableStateOf(0L) }
+    var logsSizeBytes by remember { mutableStateOf(0L) }
+    var rootStatus by remember { mutableStateOf("Checking...") }
 
-    fun refreshCacheSize() {
+    fun refreshStorageMetrics() {
         coroutineScope.launch(Dispatchers.IO) {
-            var size = 0L
-            context.cacheDir.walkTopDown().forEach { f ->
-                if (f.isFile) size += f.length()
-            }
-            cacheSizeBytes = size
+            var cSize = 0L
+            context.cacheDir.walkTopDown().forEach { f -> if (f.isFile) cSize += f.length() }
+            cacheSizeBytes = cSize
+
+            val isRoot = RootShell.isRootAvailable()
+            rootStatus = if (isRoot) "Granted (Rooted)" else "Not Available (Non-Root)"
         }
     }
 
     LaunchedEffect(Unit) {
-        refreshCacheSize()
+        refreshStorageMetrics()
     }
 
     fun startUpdateCheck() {
@@ -108,7 +115,7 @@ fun SettingsScreen(navController: NavController) {
                             }
                         }
                         is UpdateCheckResult.UpToDate -> {
-                            Text("You are using the latest version: ${res.currentVersion} (${UpdateChecker.CURRENT_BUILD_NUMBER}).")
+                            Text("You are using the latest version: ${res.currentVersion} (Build ${UpdateChecker.CURRENT_BUILD_NUMBER}).")
                         }
                         is UpdateCheckResult.Error -> {
                             Text("Error: ${res.message}", color = MaterialTheme.colorScheme.error)
@@ -172,8 +179,8 @@ fun SettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Settings & Preferences",
-                subtitle = "Configuration • Galaxy J2 Prime Tool"
+                title = "Settings & Configuration",
+                subtitle = "Galaxy J2 Prime Tool • v0.3.0 Beta"
             )
         }
     ) { padding ->
@@ -182,202 +189,349 @@ fun SettingsScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // General Settings
-            item { SettingsSectionTitle("General & Safety") }
+            // 1. GENERAL
+            item { SettingsSectionTitle("General") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Ask Before Modifying Files", fontWeight = FontWeight.SemiBold)
-                                Text("Require explicit confirmation prior to patching partitions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Switch(
-                                checked = askBeforeModify,
-                                onCheckedChange = { ThemePreferences.setAskBeforeModify(it) }
+                SettingsCard {
+                    SettingsSwitchItem(
+                        title = "Ask Before Modifying Partitions / Files",
+                        description = "Require explicit user confirmation before applying dangerous binary operations",
+                        checked = askBeforeModify,
+                        onCheckedChange = { ThemePreferences.setAskBeforeModify(it) }
+                    )
+                }
+            }
+
+            // 2. APPEARANCE
+            item { SettingsSectionTitle("Appearance") }
+            item {
+                SettingsCard {
+                    Text("Theme Mode", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ThemeMode.values().forEach { mode ->
+                            FilterChip(
+                                selected = themeMode == mode,
+                                onClick = { ThemePreferences.setThemeMode(mode) },
+                                label = { Text(mode.name) }
                             )
                         }
                     }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                        SettingsSwitchItem(
+                            title = "Material You Dynamic Colors",
+                            description = "Match UI palette with system wallpaper",
+                            checked = dynamicColor,
+                            onCheckedChange = { ThemePreferences.setDynamicColor(it) }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                    val reduceMotion by ThemePreferences.reduceMotion.collectAsState()
+                    SettingsSwitchItem(
+                        title = "Reduce Motion / Animations",
+                        description = "Optimize rendering performance for low-end devices",
+                        checked = reduceMotion,
+                        onCheckedChange = { ThemePreferences.setReduceMotion(it) }
+                    )
                 }
             }
 
-            // Appearance Settings
-            item { SettingsSectionTitle("Appearance & Theme") }
+            // 3. DEVICE
+            item { SettingsSectionTitle("Device Profile") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Theme Mode", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            ThemeMode.values().forEach { mode ->
-                                FilterChip(
-                                    selected = themeMode == mode,
-                                    onClick = { ThemePreferences.setThemeMode(mode) },
-                                    label = { Text(mode.name) }
-                                )
-                            }
-                        }
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            Spacer(Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Dynamic System Color (Material You)", fontWeight = FontWeight.SemiBold)
-                                    Text("Apply wallpaper color scheme dynamically", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Switch(
-                                    checked = dynamicColor,
-                                    onCheckedChange = { ThemePreferences.setDynamicColor(it) }
-                                )
-                            }
-                        }
+                SettingsCard {
+                    SettingsNavRow("Device Information Center", "Audit 16-category specs, sensors, and thermal matrix", Icons.Filled.PhoneAndroid) {
+                        navController.navigate("device_info")
                     }
                 }
             }
 
-            // Updates Settings
-            item { SettingsSectionTitle("Application Updates") }
+            // 4. TOOLS
+            item { SettingsSectionTitle("Tools & Toolchain") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Current Version: ${UpdateChecker.CURRENT_VERSION}", fontWeight = FontWeight.Bold)
-                                Text("Release Channel: GitHub Releases (Offline-first)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Button(
-                                onClick = { startUpdateCheck() },
-                                enabled = !isCheckingUpdates
-                            ) {
-                                if (isCheckingUpdates) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Text("Check")
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Auto Check for Updates", fontWeight = FontWeight.SemiBold)
-                                Text("Poll GitHub releases when network is available", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Switch(
-                                checked = autoUpdateCheck,
-                                onCheckedChange = { ThemePreferences.setAutoUpdateCheck(it) }
-                            )
-                        }
+                SettingsCard {
+                    SettingsNavRow("Build Tool Registry", "Verify simg2img, mkbootimg, brotli, and lz4 binaries", Icons.Filled.Handyman) {
+                        navController.navigate("build_tool_registry")
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Hash Calculator", "MD5, SHA-1, SHA-256 verification", Icons.Filled.Verified) {
+                        navController.navigate("hash_calculator")
                     }
                 }
             }
 
-            // Target Hardware & Device Profile
-            item { SettingsSectionTitle("Target Device Profile") }
+            // 5. ROOT & ROOT MODULES
+            item { SettingsSectionTitle("Root & Modules") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Active Target: ${DeviceProfile.GALAXY_J2_PRIME.marketingName}", fontWeight = FontWeight.Bold)
-                        Text("Model: SM-G532F / SM-G532G / SM-G532M", style = MaterialTheme.typography.bodySmall)
-                        Text("Chipset: MediaTek MT6737T (ARM32 Cortex-A53)", style = MaterialTheme.typography.bodySmall)
-                        Text("Porting Focus: Android 11 (LineageOS 18.1)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                SettingsCard {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Root Access Status", fontWeight = FontWeight.SemiBold)
+                            Text(rootStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(
+                            if (rootStatus.contains("Granted")) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
+                            contentDescription = null,
+                            tint = if (rootStatus.contains("Granted")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Root Center & Magisk Modules", "Manage privileged commands and inspect modules", Icons.Filled.Security) {
+                        navController.navigate("root_center")
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Boot Modes & Reboot Triggers", "System, Recovery, Download, Bootloader reboot", Icons.Filled.RestartAlt) {
+                        navController.navigate("boot_modes")
                     }
                 }
             }
 
-            // Tools Navigation Shortcuts
-            item { SettingsSectionTitle("Hardware & Tool Services") }
+            // 6. ADB & FASTBOOT
+            item { SettingsSectionTitle("ADB & Fastboot Bridge") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { navController.navigate("samsung_firmware") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.CloudDownload, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Samsung Odin & Firmware Service")
-                        }
-                        OutlinedButton(
-                            onClick = { navController.navigate("boot_modes") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.RestartAlt, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Boot Modes & Reboot Tool")
-                        }
-                        OutlinedButton(
-                            onClick = { navController.navigate("adb_fastboot") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Terminal, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("ADB & Fastboot Studio")
-                        }
+                SettingsCard {
+                    SettingsNavRow("ADB & Fastboot Studio", "Multi-mode terminal with command presets & diagnostics", Icons.Filled.Terminal) {
+                        navController.navigate("adb_fastboot")
                     }
                 }
             }
 
-            // Storage & Cache
-            item { SettingsSectionTitle("Storage & Temporary Files") }
+            // 7. SAMSUNG & FLASHING
+            item { SettingsSectionTitle("Samsung & Flashing") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Cache Storage: ${PartitionEntry.formatBytes(cacheSizeBytes)}", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(8.dp))
+                SettingsCard {
+                    SettingsNavRow("Samsung Odin Firmware Tool", "Tar.md5 unpacker, CSC extractor & flash plan", Icons.Filled.CloudDownload) {
+                        navController.navigate("samsung_firmware")
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Safe Flash Pre-Check", "Partition overflow detection & risk calculator", Icons.Filled.Shield) {
+                        navController.navigate("flash_precheck")
+                    }
+                }
+            }
+
+            // 8. USB
+            item { SettingsSectionTitle("USB & OTG") }
+            item {
+                SettingsCard {
+                    SettingsNavRow("USB Host Center", "OTG device probe, Samsung VID/PID scanner & descriptors", Icons.Filled.Usb) {
+                        navController.navigate("usb_host_center")
+                    }
+                }
+            }
+
+            // 9. LOGS & DIAGNOSTICS
+            item { SettingsSectionTitle("Logs & Diagnostics") }
+            item {
+                SettingsCard {
+                    SettingsNavRow("System Log Analyzer", "Live logcat, dmesg, and pstore streamer", Icons.Filled.Monitor) {
+                        navController.navigate("log_analyzer")
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Boot Diagnostic Pipeline", "12-stage boot sequence analyzer", Icons.Filled.Troubleshoot) {
+                        navController.navigate("boot_diagnostic")
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsNavRow("Kernel Crash & Ram-oops", "Analyze last_kmsg and crash signals", Icons.Filled.BugReport) {
+                        navController.navigate("kernel_crash_analyzer")
+                    }
+                }
+            }
+
+            // 10. STORAGE & CACHE
+            item { SettingsSectionTitle("Storage & Cache") }
+            item {
+                SettingsCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Cache Storage", fontWeight = FontWeight.SemiBold)
+                            Text(PartitionEntry.formatBytes(cacheSizeBytes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         Button(
                             onClick = {
                                 coroutineScope.launch(Dispatchers.IO) {
                                     context.cacheDir.deleteRecursively()
                                     context.cacheDir.mkdirs()
-                                    refreshCacheSize()
+                                    refreshStorageMetrics()
                                 }
-                                Toast.makeText(context, "Cache wiped.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Cache cleared.", Toast.LENGTH_SHORT).show()
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            modifier = Modifier.fillMaxWidth()
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
-                            Text("Clear Temporary Cache & Updates")
+                            Text("Clear Cache")
                         }
                     }
                 }
             }
 
-            // About Section
+            // 11. PERFORMANCE & WORKFLOW
+            item { SettingsSectionTitle("Performance & Workflows") }
+            item {
+                SettingsCard {
+                    val concurrentTasks by ThemePreferences.concurrentTasks.collectAsState()
+                    val backgroundScan by ThemePreferences.backgroundScan.collectAsState()
+                    val memoryMode by ThemePreferences.memoryMode.collectAsState()
+
+                    Text("Memory Management Mode: $memoryMode", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("Low RAM", "Balanced", "High Perf").forEach { mode ->
+                            FilterChip(
+                                selected = memoryMode == mode,
+                                onClick = { ThemePreferences.setMemoryMode(mode) },
+                                label = { Text(mode, style = MaterialTheme.typography.bodySmall) }
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                    SettingsSwitchItem(
+                        title = "Background Diagnostics Scanning",
+                        description = "Allow passive hardware & sensor telemetry polling",
+                        checked = backgroundScan,
+                        onCheckedChange = { ThemePreferences.setBackgroundScan(it) }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Max Concurrent Tasks ($concurrentTasks)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Limit background worker threads for MT6737T 4-core stability", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Row {
+                            IconButton(onClick = { if (concurrentTasks > 1) ThemePreferences.setConcurrentTasks(concurrentTasks - 1) }) {
+                                Icon(Icons.Filled.Remove, contentDescription = "Decrease")
+                            }
+                            IconButton(onClick = { if (concurrentTasks < 4) ThemePreferences.setConcurrentTasks(concurrentTasks + 1) }) {
+                                Icon(Icons.Filled.Add, contentDescription = "Increase")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 11. SECURITY & SELINUX
+            item { SettingsSectionTitle("Security") }
+            item {
+                SettingsCard {
+                    SettingsNavRow("SELinux Policy Analyzer", "Audit contexts, sepolicy rules & AVC denials", Icons.Filled.Security) {
+                        navController.navigate("selinux_analyzer")
+                    }
+                }
+            }
+
+            // 12. REPORTS
+            item { SettingsSectionTitle("Reports") }
+            item {
+                SettingsCard {
+                    SettingsNavRow("Technical Report Generator", "Generate and export markdown audit reports", Icons.Filled.Description) {
+                        navController.navigate("report_generator")
+                    }
+                }
+            }
+
+            // 13. UPDATES
+            item { SettingsSectionTitle("Updates") }
+            item {
+                SettingsCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Version: 0.3.0 Beta", fontWeight = FontWeight.Bold)
+                            Text("Release: Beta 3 (Code 3)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Button(
+                            onClick = { startUpdateCheck() },
+                            enabled = !isCheckingUpdates
+                        ) {
+                            if (isCheckingUpdates) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text("Check")
+                            }
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsSwitchItem(
+                        title = "Auto-Check for Updates",
+                        description = "Poll GitHub release feed on network connect",
+                        checked = autoUpdateCheck,
+                        onCheckedChange = { ThemePreferences.setAutoUpdateCheck(it) }
+                    )
+                }
+            }
+
+            // 14. ABOUT
             item { SettingsSectionTitle("About") }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Galaxy J2 Prime ROM Studio", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Text("Version: Beta 3 (v1.0-beta3)", style = MaterialTheme.typography.bodySmall)
-                        Text("Min SDK: 24 (Android 7.0) • Target SDK: 36", style = MaterialTheme.typography.bodySmall)
-                        Text("Host Architecture: ${System.getProperty("os.arch")} (${Build.SUPPORTED_ABIS.firstOrNull()})", style = MaterialTheme.typography.bodySmall)
-                        Text("Developer: uzakbaevnurzhan", style = MaterialTheme.typography.bodySmall)
-                        Text("Repository: https://github.com/uzakbaevnurzhan/GalaxyJ2primeTool", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Open Source License: Apache 2.0 / GPLv2", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                SettingsCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.app_logo_foreground_1787245853129),
+                            contentDescription = "Galaxy J2 Prime Tool Logo",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text("Galaxy J2 Prime Tool", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text("Version: 0.3.0 Beta (Release: Beta 3)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Version code: 3", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
+                    Spacer(Modifier.height(12.dp))
+                    Text("Build Metadata:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                    Text("Target SDK: 36 • Min SDK: 24 (Android 7.0+)", style = MaterialTheme.typography.bodySmall)
+                    Text("Host Architecture: ${System.getProperty("os.arch")} (${Build.SUPPORTED_ABIS.joinToString()})", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Target Hardware Profile:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                    Text("Samsung Galaxy J2 Prime (SM-G532F / SM-G532G / SM-G532M)", style = MaterialTheme.typography.bodySmall)
+                    Text("Chipset: MediaTek MT6737T (ARM32 Cortex-A53 / MT6735 base)", style = MaterialTheme.typography.bodySmall)
+                    Text("Android Target: Android 11 (LineageOS 18.1)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Open Source Licenses:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                    Text("Apache License 2.0 & GNU General Public License v2", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Repository:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = "https://github.com/uzakbaevnurzhan/GalaxyJ2primeTool",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/uzakbaevnurzhan/GalaxyJ2primeTool"))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot open browser", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
                 }
             }
 
@@ -387,12 +541,72 @@ fun SettingsScreen(navController: NavController) {
 }
 
 @Composable
+fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            content()
+        }
+    }
+}
+
+@Composable
 fun SettingsSectionTitle(title: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)
+        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
     )
+}
+
+@Composable
+fun SettingsSwitchItem(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+
+@Composable
+fun SettingsNavRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(14.dp))
+    }
 }

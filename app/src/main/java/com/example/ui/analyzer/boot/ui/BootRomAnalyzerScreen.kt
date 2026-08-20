@@ -381,7 +381,7 @@ private fun PipelineAndIssuesView(result: BootAnalysisResult) {
                             BootStageStatus.PASS -> Pair(Color(0xFF4CAF50), Icons.Filled.CheckCircle)
                             BootStageStatus.WARNING -> Pair(Color(0xFFFF9800), Icons.Filled.Warning)
                             BootStageStatus.ERROR -> Pair(MaterialTheme.colorScheme.error, Icons.Filled.Error)
-                            BootStageStatus.UNKNOWN -> Pair(Color.Gray, Icons.Filled.HelpOutline)
+                            BootStageStatus.UNKNOWN -> Pair(Color.Gray, Icons.AutoMirrored.Filled.HelpOutline)
                         }
 
                         Row(
@@ -737,7 +737,7 @@ private fun PortingAndJ2PrimeView(result: BootAnalysisResult) {
                     BootStageStatus.PASS -> Pair(Color(0xFF4CAF50), Icons.Filled.CheckCircle)
                     BootStageStatus.WARNING -> Pair(Color(0xFFFF9800), Icons.Filled.Warning)
                     BootStageStatus.ERROR -> Pair(MaterialTheme.colorScheme.error, Icons.Filled.Error)
-                    BootStageStatus.UNKNOWN -> Pair(Color.Gray, Icons.Filled.HelpOutline)
+                    BootStageStatus.UNKNOWN -> Pair(Color.Gray, Icons.AutoMirrored.Filled.HelpOutline)
                 }
 
                 Card(modifier = Modifier.fillMaxWidth()) {

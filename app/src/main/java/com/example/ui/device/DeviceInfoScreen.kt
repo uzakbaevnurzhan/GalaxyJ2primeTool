@@ -183,13 +183,10 @@ fun DeviceInfoScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Device Center", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Device Center",
+                subtitle = "${Build.MANUFACTURER} ${Build.MODEL} • 16-Category Spec Audit",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = {
                         isScanning = true

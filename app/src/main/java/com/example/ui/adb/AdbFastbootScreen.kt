@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -412,7 +413,7 @@ fun AdbFastbootScreen(navController: NavController) {
                                 if (isExecuting) {
                                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                 } else {
-                                    Icon(Icons.Filled.Send, contentDescription = "Run")
+                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Run")
                                 }
                             }
                         }
