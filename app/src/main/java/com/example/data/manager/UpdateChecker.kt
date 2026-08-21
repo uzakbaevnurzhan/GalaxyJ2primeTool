@@ -94,6 +94,11 @@ object UpdateChecker {
         onProgress: (Float, String) -> Unit
     ): File? = withContext(Dispatchers.IO) {
         try {
+            // Security: Enforce HTTPS for APK delivery
+            if (!downloadUrl.startsWith("https://", ignoreCase = true)) {
+                return@withContext null
+            }
+
             val updateDir = File(context.cacheDir, "updates")
             if (!updateDir.exists()) updateDir.mkdirs()
             val destFile = File(updateDir, "GalaxyJ2primeTool_update.apk")
@@ -106,27 +111,29 @@ object UpdateChecker {
             conn.instanceFollowRedirects = true
 
             val totalSize = conn.contentLengthLong
-            val input = conn.inputStream
-            val output = FileOutputStream(destFile)
+            conn.inputStream.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalRead = 0L
 
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            var totalRead = 0L
-
-            while (input.read(buffer).also { bytesRead = it } != -1) {
-                output.write(buffer, 0, bytesRead)
-                totalRead += bytesRead
-                val progress = if (totalSize > 0) totalRead.toFloat() / totalSize else 0.5f
-                onProgress(progress, "Downloading: ${totalRead / 1024} KB / ${if (totalSize > 0) "${totalSize / 1024} KB" else "..."}")
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalRead += bytesRead
+                        val progress = if (totalSize > 0) totalRead.toFloat() / totalSize else 0.5f
+                        onProgress(progress, "Downloading: ${totalRead / 1024} KB / ${if (totalSize > 0) "${totalSize / 1024} KB" else "..."}")
+                    }
+                    output.flush()
+                }
             }
 
-            output.flush()
-            output.close()
-            input.close()
-
-            return@withContext destFile
+            if (destFile.exists() && destFile.length() > 0) {
+                destFile
+            } else {
+                null
+            }
         } catch (e: Exception) {
-            return@withContext null
+            null
         }
     }
 }

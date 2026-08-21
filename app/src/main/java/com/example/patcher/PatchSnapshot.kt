@@ -72,7 +72,14 @@ object SnapshotManager {
                 // Targeted snapshot for specific files
                 for (relPath in filterRelativePaths) {
                     val targetFile = File(workspaceDir, relPath)
-                    if (targetFile.exists() || Os.lstat(targetFile.absolutePath).let { true }) {
+                    val existsOrSymlink = targetFile.exists() || try {
+                        Os.lstat(targetFile.absolutePath)
+                        true
+                    } catch (_: Exception) {
+                        false
+                    }
+
+                    if (existsOrSymlink) {
                         val entry = backupFile(workspaceDir, targetFile, filesBackupDir)
                         if (entry != null) {
                             entries.add(entry)

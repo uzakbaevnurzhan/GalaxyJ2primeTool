@@ -1,14 +1,22 @@
 package com.example.ui.studio.formats
 
 import android.system.Os
+import com.example.utils.SecurityUtil
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
 
 object CpioHandler {
+    private const val MAX_ENTRIES = 50_000
+    private const val MAX_TOTAL_SIZE = 2L * 1024 * 1024 * 1024 // 2 GB
+
     fun unpack(cpioFile: File, outputDir: File): Boolean {
-        if (!cpioFile.exists()) return false
+        if (!cpioFile.exists() || cpioFile.length() == 0L) return false
         outputDir.mkdirs()
+
+        var entriesCount = 0
+        var totalBytesWritten = 0L
+        var validHeaderEncountered = false
 
         try {
             RandomAccessFile(cpioFile, "r").use { raf ->
@@ -19,8 +27,10 @@ object CpioHandler {
                     if (readLen < 6) break
                     val magic = String(magicBytes)
                     if (magic != "070701" && magic != "070702") {
+                        if (!validHeaderEncountered) return false
                         break
                     }
+                    validHeaderEncountered = true
 
                     val ino = readHex(raf, 8)
                     val mode = readHex(raf, 8)
@@ -36,19 +46,35 @@ object CpioHandler {
                     val namesize = readHex(raf, 8)
                     val check = readHex(raf, 8)
 
+                    if (namesize <= 0 || namesize > 4096) {
+                        return false
+                    }
+
                     val nameBytes = ByteArray(namesize.toInt())
                     raf.read(nameBytes)
-                    val name = String(nameBytes, 0, namesize.toInt() - 1)
+                    val rawName = String(nameBytes, 0, (namesize.toInt() - 1).coerceAtLeast(0))
 
                     val headerSize = 110 + namesize
                     val pad = (4 - (headerSize % 4)) % 4
                     raf.skipBytes(pad.toInt())
 
-                    if (name == "TRAILER!!!") {
+                    if (rawName == "TRAILER!!!") {
                         break
                     }
 
-                    val outPath = File(outputDir, name)
+                    // Security: Safe resolution inside outputDir
+                    val outPath = try {
+                        SecurityUtil.safeResolve(outputDir, rawName)
+                    } catch (e: SecurityException) {
+                        // Skip or reject malicious entry
+                        return false
+                    }
+
+                    entriesCount++
+                    if (entriesCount > MAX_ENTRIES) {
+                        return false
+                    }
+
                     val type = (mode shr 12) and 0xF
 
                     when (type) {
@@ -56,6 +82,10 @@ object CpioHandler {
                             outPath.mkdirs()
                         }
                         8L -> { // regular file
+                            totalBytesWritten += filesize
+                            if (totalBytesWritten > MAX_TOTAL_SIZE) {
+                                return false
+                            }
                             outPath.parentFile?.mkdirs()
                             FileOutputStream(outPath).use { fos ->
                                 var remaining = filesize
@@ -74,6 +104,7 @@ object CpioHandler {
                             raf.read(targetBytes)
                             val target = String(targetBytes, 0, filesize.toInt())
                             try {
+                                outPath.delete()
                                 Os.symlink(target, outPath.absolutePath)
                             } catch (e: Exception) {
                                 outPath.writeText("SYMLINK:$target")
@@ -88,7 +119,7 @@ object CpioHandler {
                     raf.skipBytes(dataPad.toInt())
                 }
             }
-            return true
+            return validHeaderEncountered
         } catch (e: Exception) {
             e.printStackTrace()
             return false
@@ -97,7 +128,9 @@ object CpioHandler {
 
     private fun readHex(raf: RandomAccessFile, len: Int): Long {
         val bytes = ByteArray(len)
-        raf.read(bytes)
+        val read = raf.read(bytes)
+        if (read < len) return 0L
         return String(bytes).toLongOrNull(16) ?: 0L
     }
 }
+
