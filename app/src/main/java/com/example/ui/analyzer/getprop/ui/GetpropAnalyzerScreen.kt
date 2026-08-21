@@ -94,22 +94,10 @@ fun GetpropAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Getprop & Build.prop Analyzer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            text = if (analysisResult != null) analysisResult!!.snapshot.name else "Offline Android Properties Engine",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Getprop & Build.prop Analyzer",
+                subtitle = if (analysisResult != null) analysisResult!!.snapshot.name else "Offline Android Properties Engine",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     if (analysisResult != null) {
                         IconButton(onClick = { showExportDialog = true }) {

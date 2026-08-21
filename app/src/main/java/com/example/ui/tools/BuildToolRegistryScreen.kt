@@ -117,13 +117,10 @@ fun BuildToolRegistryScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Build Tool Registry", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Build Tool Registry",
+                subtitle = "Native Binary & Script Discovery",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { scanTools() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Scan")
@@ -149,6 +146,8 @@ fun BuildToolRegistryScreen(navController: NavController) {
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text("Local Binary Toolchain Audit", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("NATIVE TOOLS ARE NOT BUNDLED BY DEFAULT (user must provide statically compiled binaries in PATH).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                         Text(
                             text = "${toolsList.count { it.isAvailable }} of ${toolsList.size} tools detected locally. All operations use local verifiable binaries.",
                             style = MaterialTheme.typography.bodySmall,

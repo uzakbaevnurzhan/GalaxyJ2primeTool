@@ -42,22 +42,10 @@ fun VendorHalRilScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Vendor, HAL & RIL Analyzer", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = analysisResult?.targetName ?: "Hardware & Subsystem Diagnostics",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Vendor, HAL & RIL Analyzer",
+                subtitle = analysisResult?.targetName ?: "Hardware & Subsystem Diagnostics",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     if (analysisResult != null) {
                         IconButton(onClick = {

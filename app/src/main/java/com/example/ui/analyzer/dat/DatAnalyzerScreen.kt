@@ -152,13 +152,10 @@ fun DatAnalyzerScreen(navController: NavController, viewModel: DatAnalyzerViewMo
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("DAT/DAT.BR Engine") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+            com.example.ui.common.AppTopBar(
+                title = "DAT/DAT.BR Engine",
+                subtitle = "Android Sparse & Brotli Image Converter",
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     ) { padding ->

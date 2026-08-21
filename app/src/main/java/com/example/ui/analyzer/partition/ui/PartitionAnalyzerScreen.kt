@@ -251,30 +251,10 @@ fun PartitionAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "Partition Table Analyzer",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (fileName.isNotEmpty()) {
-                            Text(
-                                fileName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Partition Table Analyzer",
+                subtitle = if (fileName.isNotEmpty()) fileName else "GPT, PIT, MBR & Raw MMC Parser",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = {
                         result?.let {
@@ -285,10 +265,7 @@ fun PartitionAnalyzerScreen(
                     }) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "Copy Report")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         }
     ) { padding ->

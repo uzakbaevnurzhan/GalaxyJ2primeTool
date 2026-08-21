@@ -40,13 +40,10 @@ fun ElfAnalyzerScreen(navController: NavController, viewModel: ElfAnalyzerViewMo
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("ELF / .so Analyzer") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+            com.example.ui.common.AppTopBar(
+                title = "ELF / .so Analyzer",
+                subtitle = viewModel.elfName ?: "Symbols, Headers, Dependencies & ARM32 Verification",
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     ) { padding ->

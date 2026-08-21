@@ -2,6 +2,7 @@ package com.example.data.manager
 
 import android.content.Context
 import android.os.Build
+import com.example.config.AppVersionConfig
 import com.example.data.model.ReportFormat
 import com.example.data.model.ReportType
 import com.example.utils.RootShell
@@ -19,7 +20,7 @@ object ReportGeneratorEngine {
 
     data class ReportData(
         val reportType: String,
-        val appVersion: String = "Beta 3",
+        val appVersion: String = AppVersionConfig.RELEASE_NAME,
         val generatedAt: String,
         val projectName: String,
         val device: String,
@@ -138,7 +139,7 @@ object ReportGeneratorEngine {
 
     private fun formatAsCsv(data: ReportData): String = buildString {
         appendLine("Section,Key,Value,Details")
-        appendLine("\"Metadata\",\"BETA VERSION\",\"Beta 3\",\"\"")
+        appendLine("\"Metadata\",\"BETA VERSION\",\"${AppVersionConfig.RELEASE_NAME}\",\"\"")
         appendLine("\"Metadata\",\"Report Type\",\"${data.reportType}\",\"\"")
         appendLine("\"Metadata\",\"Project\",\"${data.projectName.replace("\"", "\"\"")}\",\"\"")
         appendLine("\"Metadata\",\"Generated At\",\"${data.generatedAt}\",\"\"")

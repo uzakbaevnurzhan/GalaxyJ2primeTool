@@ -19,7 +19,7 @@ object XmlPatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val targetFile = File(workspaceDir, op.targetPath)
+        val targetFile = com.example.utils.SecurityUtil.safeResolve(workspaceDir, op.targetPath)
         
         if (!targetFile.exists()) {
             return SinglePatchExecutionResult(
@@ -36,7 +36,7 @@ object XmlPatch {
 
         val doc: Document
         try {
-            val dbFactory = DocumentBuilderFactory.newInstance()
+            val dbFactory = com.example.utils.XmlSecurityUtil.createSecureDocumentBuilderFactory()
             dbFactory.isNamespaceAware = false
             val dBuilder = dbFactory.newDocumentBuilder()
             doc = dBuilder.parse(ByteArrayInputStream(originalContent.toByteArray(Charsets.UTF_8)))
@@ -82,7 +82,7 @@ object XmlPatch {
                     val root = doc.documentElement
                     if (textVal != null) {
                         // Parse node snippet and import into doc
-                        val snippetDoc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                        val snippetDoc = com.example.utils.XmlSecurityUtil.createSecureDocumentBuilderFactory().newDocumentBuilder()
                             .parse(ByteArrayInputStream("<wrapper>$textVal</wrapper>".toByteArray(Charsets.UTF_8)))
                         val nodes = snippetDoc.documentElement.childNodes
                         for (i in 0 until nodes.length) {
@@ -180,7 +180,7 @@ object XmlPatch {
     }
 
     fun validateXmlString(xmlContent: String): Boolean {
-        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dbFactory = com.example.utils.XmlSecurityUtil.createSecureDocumentBuilderFactory()
         val dBuilder = dbFactory.newDocumentBuilder()
         dBuilder.parse(ByteArrayInputStream(xmlContent.toByteArray(Charsets.UTF_8)))
         return true

@@ -63,13 +63,10 @@ fun ReportGeneratorScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Report Generator Suite", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+            com.example.ui.common.AppTopBar(
+                title = "Report Generator Suite",
+                subtitle = "Comprehensive Diagnostics & Workspace Reports",
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     ) { padding ->
@@ -157,7 +154,7 @@ fun ReportGeneratorScreen(navController: NavController) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Generating Official Report...")
                 } else {
-                    Icon(Icons.Filled.Article, contentDescription = null)
+                    Icon(Icons.Filled.Description, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Generate ${selectedType.name.replace("_", " ")}")
                 }

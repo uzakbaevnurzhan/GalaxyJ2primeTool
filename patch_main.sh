@@ -1,3 +1,4 @@
+cat << 'MAIN_EOF' > app/src/main/java/com/example/MainActivity.kt
 package com.example
 
 import android.os.Build
@@ -22,11 +23,14 @@ class MainActivity : ComponentActivity() {
     
     lifecycleScope.launch {
         ThemePreferences.maxFpsEnabled.collect { enabled ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window.attributes = window.attributes.apply {
-                    val currentDisplay = display
-                    val maxMode = currentDisplay?.supportedModes?.maxByOrNull { it.refreshRate }
-                    preferredDisplayModeId = if (enabled) (maxMode?.modeId ?: 0) else 0
+                    val maxMode = window.windowManager.defaultDisplay.supportedModes.maxByOrNull { it.refreshRate }
+                    preferredDisplayModeId = maxMode?.modeId ?: 0
+                }
+            } else if (!enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.attributes = window.attributes.apply {
+                    preferredDisplayModeId = 0
                 }
             }
         }
@@ -39,3 +43,4 @@ class MainActivity : ComponentActivity() {
     }
   }
 }
+MAIN_EOF

@@ -264,7 +264,7 @@ fun DashboardScreen(navController: NavController) {
         topBar = {
             AppTopBar(
                 title = "Galaxy J2 Prime Tool",
-                subtitle = "${Build.MANUFACTURER} ${Build.MODEL} • Universal Scanner (Beta 3)",
+                subtitle = "${Build.MANUFACTURER} ${Build.MODEL} • Universal Scanner (${com.example.config.AppVersionConfig.RELEASE_NAME})",
                 actions = {
                     IconButton(onClick = { navController.navigate("global_search") }) {
                         Icon(Icons.Filled.Search, contentDescription = "Global Search")
@@ -458,36 +458,6 @@ fun DashboardScreen(navController: NavController) {
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )
-            }
-
-            // Master Orchestrator Card
-            Card(
-                onClick = { navController.navigate("full_system_analyzer") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Troubleshoot, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Full System Analyzer", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Master diagnostic auditor: Hardware, Kernel 3.18, HALs, RIL, SELinux, Partitions & Boot verification.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
             }
 
             // 1. Device Hardware Identification Section

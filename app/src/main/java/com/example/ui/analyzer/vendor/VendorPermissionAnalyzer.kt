@@ -13,6 +13,8 @@ object VendorPermissionAnalyzer {
         try {
             val factory = XmlPullParserFactory.newInstance()
             factory.isNamespaceAware = true
+            factory.setFeature(XmlPullParser.FEATURE_PROCESS_DOCDECL, false)
+            factory.isNamespaceAware = true
             val parser = factory.newPullParser()
             parser.setInput(StringReader(content))
 

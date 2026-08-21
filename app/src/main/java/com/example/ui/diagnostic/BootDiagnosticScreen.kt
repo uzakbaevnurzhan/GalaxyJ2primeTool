@@ -241,13 +241,10 @@ fun BootDiagnosticScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Boot Diagnostics Pipeline", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Boot Diagnostics Pipeline",
+                subtitle = "12-Stage Linux & Android Boot Sequence Audit",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { runDiagnostic() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Re-Audit")

@@ -9,7 +9,7 @@ object PropertyPatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val targetFile = File(workspaceDir, op.targetPath)
+        val targetFile = com.example.utils.SecurityUtil.safeResolve(workspaceDir, op.targetPath)
         val oldHash = if (targetFile.exists()) SnapshotManager.calculateSha256(targetFile) else null
         val oldSize = if (targetFile.exists()) targetFile.length() else 0L
 

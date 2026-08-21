@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.example.config.AppVersionConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -36,8 +37,8 @@ enum class UpdateErrorType {
 }
 
 object UpdateChecker {
-    val CURRENT_VERSION = "0.3.0 Beta"
-    val CURRENT_BUILD_NUMBER = 3
+    val CURRENT_VERSION = AppVersionConfig.VERSION_NAME
+    val CURRENT_BUILD_NUMBER = AppVersionConfig.BUILD_NUMBER
 
     // Ordered list of known release builds to query
     val KNOWN_RELEASES = listOf(

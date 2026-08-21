@@ -1,0 +1,1 @@
+sed -i '/val reduceMotion/a \    val performanceMode by ThemePreferences.performanceMode.collectAsState()\n    val maxFpsEnabled by ThemePreferences.maxFpsEnabled.collectAsState()\n    val fastAnimations by ThemePreferences.fastAnimations.collectAsState()' app/src/main/java/com/example/ui/settings/SettingsScreen.kt

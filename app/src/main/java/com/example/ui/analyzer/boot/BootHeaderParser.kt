@@ -44,6 +44,9 @@ object BootHeaderParser {
     }
 
     fun parseHeaderBytes(headerBytes: ByteArray, totalFileSize: Long): BootHeaderInfo {
+        if (headerBytes.size < 64) {
+            return createInvalidHeader("Header bytes array too small")
+        }
         for (i in 0..7) {
             if (i >= headerBytes.size || headerBytes[i] != ANDROID_BOOT_MAGIC[i]) {
                 return createInvalidHeader("Missing ANDROID! magic at offset 0 (Found: ${getSafeString(headerBytes, 0, 8)})")
@@ -51,36 +54,12 @@ object BootHeaderParser {
         }
 
         val buffer = ByteBuffer.wrap(headerBytes).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.position(8) // Skip ANDROID!
+        buffer.position(8)
 
-        // Determine header version first
-        // In v0..v2: header_version is at offset 40
-        // In v3..v4: header_version is at offset 12 or 40 depending on structure
         val v3CheckVersion = if (headerBytes.size >= 16) {
             buffer.position(12)
             buffer.getInt()
         } else 0
-
-        // In standard v0..v2:
-        // offset 8: kernel_size (uint32)
-        // offset 12: kernel_addr (uint32)
-        // offset 16: ramdisk_size (uint32)
-        // offset 20: ramdisk_addr (uint32)
-        // offset 24: second_size (uint32)
-        // offset 28: second_addr (uint32)
-        // offset 32: tags_addr (uint32)
-        // offset 36: page_size (uint32)
-        // offset 40: header_version (uint32)
-        // offset 44: os_version (uint32)
-        // offset 48: name (16 bytes)
-        // offset 64: cmdline (512 bytes)
-        // offset 576: id (32 bytes SHA)
-        // offset 608: extra_cmdline (1024 bytes)
-        // offset 1632: recovery_dtbo_size (uint32 in v1)
-        // offset 1636: recovery_dtbo_offset (uint64 in v1)
-        // offset 1644: header_size (uint32 in v1)
-        // offset 1648: dtb_size (uint32 in v2)
-        // offset 1652: dtb_addr (uint64 in v2)
 
         buffer.position(40)
         val headerVersionStandard = if (headerBytes.size >= 44) buffer.getInt() else 0
@@ -95,6 +74,7 @@ object BootHeaderParser {
     }
 
     private fun parseV0V1V2Header(bytes: ByteArray, version: Int, totalFileSize: Long): BootHeaderInfo {
+        if (bytes.size < 48) return createInvalidHeader("Truncated V0 header")
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
         buffer.position(8)
 
@@ -105,14 +85,22 @@ object BootHeaderParser {
         val secondSize = buffer.getInt().toLong() and 0xFFFFFFFFL
         val secondAddr = buffer.getInt().toLong() and 0xFFFFFFFFL
         val tagsAddr = buffer.getInt().toLong() and 0xFFFFFFFFL
-        val pageSize = buffer.getInt().coerceAtLeast(2048)
+        val pageSizeRaw = buffer.getInt()
+        val pageSize = if (pageSizeRaw > 0) pageSizeRaw else 2048
+        
+        if (pageSize < 2048 || pageSize > 16384) {
+             return createInvalidHeader("Invalid page size: $pageSize")
+        }
+
         buffer.getInt() // header_version
         val osVersionRaw = buffer.getInt()
 
         val boardName = getNullTerminatedString(bytes, 48, 16)
         val cmdline = getNullTerminatedString(bytes, 64, 512)
         val shaBytes = ByteArray(32)
-        System.arraycopy(bytes, 576, shaBytes, 0, 32.coerceAtMost(bytes.size - 576))
+        if (bytes.size >= 608) {
+             System.arraycopy(bytes, 576, shaBytes, 0, 32)
+        }
         val shaString = shaBytes.joinToString("") { "%02x".format(it) }
 
         var extraCmdline = ""
@@ -141,11 +129,27 @@ object BootHeaderParser {
 
         val (osVer, patchLevel) = decodeOsVersionAndPatch(osVersionRaw)
 
-        // Calculate page alignments
         val pageCount = { size: Long -> ((size + pageSize - 1) / pageSize) * pageSize }
-        val kernelOffset = pageSize.toLong()
-        val ramdiskOffset = kernelOffset + pageCount(kernelSize)
-        val secondOffset = ramdiskOffset + pageCount(ramdiskSize)
+        
+        var totalOffset = pageSize.toLong()
+        val kernelOffset = totalOffset
+        
+        if (totalOffset > Long.MAX_VALUE - pageCount(kernelSize)) return createInvalidHeader("Kernel size overflow")
+        totalOffset += pageCount(kernelSize)
+        val ramdiskOffset = totalOffset
+        
+        if (totalOffset > Long.MAX_VALUE - pageCount(ramdiskSize)) return createInvalidHeader("Ramdisk size overflow")
+        totalOffset += pageCount(ramdiskSize)
+        val secondOffset = totalOffset
+
+        if (totalOffset > Long.MAX_VALUE - pageCount(secondSize)) return createInvalidHeader("Second size overflow")
+        totalOffset += pageCount(secondSize)
+        
+        // Ensure total file size check if full image is provided
+        if (totalFileSize > pageSize && (kernelOffset + kernelSize > totalFileSize || ramdiskOffset + ramdiskSize > totalFileSize)) {
+             return createInvalidHeader("Sizes exceed total file size")
+        }
+
         val tagsOffset = tagsAddr
 
         return BootHeaderInfo(
@@ -182,33 +186,32 @@ object BootHeaderParser {
     }
 
     private fun parseV3V4Header(bytes: ByteArray, version: Int, totalFileSize: Long): BootHeaderInfo {
+        if (bytes.size < 44) return createInvalidHeader("Truncated V3/V4 header")
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        // Android Boot v3/v4 format:
-        // offset 0: magic (8 bytes)
-        // offset 8: kernel_size (uint32)
-        // offset 12: ramdisk_size (uint32)
-        // offset 16: os_version (uint32)
-        // offset 20: header_size (uint32)
-        // offset 24: reserved (16 bytes)
-        // offset 40: header_version (uint32)
-        // offset 44: cmdline (1536 bytes in v3/v4)
-        // in v4: signature_size (uint32 at offset 1580)
         
         buffer.position(8)
         val kernelSize = buffer.getInt().toLong() and 0xFFFFFFFFL
         val ramdiskSize = buffer.getInt().toLong() and 0xFFFFFFFFL
         val osVersionRaw = buffer.getInt()
         val headerSize = buffer.getInt()
+        
+        if (bytes.size < 48) return createInvalidHeader("Truncated V3/V4 header version")
         buffer.position(40)
         val readVersion = buffer.getInt()
         val cmdline = getNullTerminatedString(bytes, 44, 1536.coerceAtMost(bytes.size - 44))
 
         val (osVer, patchLevel) = decodeOsVersionAndPatch(osVersionRaw)
-        val pageSize = 4096 // Boot v3/v4 fixed page size = 4096
+        val pageSize = 4096
 
         val pageCount = { size: Long -> ((size + 4095) / 4096) * 4096 }
         val kernelOffset = 4096L
+        
+        if (kernelOffset > Long.MAX_VALUE - pageCount(kernelSize)) return createInvalidHeader("Kernel size overflow")
         val ramdiskOffset = kernelOffset + pageCount(kernelSize)
+
+        if (totalFileSize > pageSize && (kernelOffset + kernelSize > totalFileSize || ramdiskOffset + ramdiskSize > totalFileSize)) {
+             return createInvalidHeader("Sizes exceed total file size")
+        }
 
         return BootHeaderInfo(
             isValid = true,
@@ -260,7 +263,7 @@ object BootHeaderParser {
     }
 
     private fun getNullTerminatedString(bytes: ByteArray, offset: Int, maxLen: Int): String {
-        if (offset >= bytes.size) return ""
+        if (offset < 0 || offset >= bytes.size || maxLen < 0) return ""
         val actualMax = maxLen.coerceAtMost(bytes.size - offset)
         var end = offset
         while (end < offset + actualMax && bytes[end] != 0.toByte()) {
@@ -270,7 +273,7 @@ object BootHeaderParser {
     }
 
     private fun getSafeString(bytes: ByteArray, offset: Int, len: Int): String {
-        if (offset >= bytes.size) return ""
+        if (offset < 0 || offset >= bytes.size || len < 0) return ""
         val actualLen = len.coerceAtMost(bytes.size - offset)
         return String(bytes, offset, actualLen, Charsets.US_ASCII).replace("\u0000", " ")
     }

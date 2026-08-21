@@ -98,13 +98,10 @@ fun KernelCrashAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Kernel Crash Analyzer", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Kernel Crash Analyzer",
+                subtitle = "Panic, Oops, Call-Trace & System.map Decoder",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { systemMapLauncher.launch("*/*") }) {
                         Icon(

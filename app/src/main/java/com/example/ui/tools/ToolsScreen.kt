@@ -180,7 +180,7 @@ fun ToolsScreen(navController: NavController) {
                 title = "Fstab Analyzer",
                 description = "Parse partition mounts, flags, wait/check options and encryption parameters",
                 route = "fstab_analyzer",
-                icon = Icons.Filled.FormatListBulleted,
+                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                 category = "PARTITIONS",
                 status = "READY",
                 rootRequired = false,
@@ -566,22 +566,6 @@ fun ToolCardItem(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            // Capabilities Row
-            if (tool.capabilities.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    tool.capabilities.take(3).forEach { cap ->
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text(cap, style = MaterialTheme.typography.labelSmall) },
-                            modifier = Modifier.height(28.dp)
-                        )
-                    }
-                }
-            }
 
             // Open Action
             Row(

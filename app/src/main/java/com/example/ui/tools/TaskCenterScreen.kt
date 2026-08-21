@@ -31,13 +31,10 @@ fun TaskCenterScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Task Center", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Task Center",
+                subtitle = "Active Background Operations & Queue",
+                onNavigateBack = { navController.navigateUp() },
                 actions = {
                     IconButton(onClick = { TaskManager.clearCompleted() }) {
                         Icon(Icons.Filled.CleaningServices, contentDescription = "Clear Completed")
@@ -246,7 +243,7 @@ fun TaskCard(
                 Text("Started at $timeStr", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
 
                 TextButton(onClick = onViewLogs) {
-                    Icon(Icons.Filled.Notes, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("View Logs (${task.logs.size})", style = MaterialTheme.typography.labelMedium)
                 }

@@ -1,22 +1,27 @@
 package com.example.patcher.operations
 
+import android.system.Os
 import com.example.patcher.PatchOperation
 import com.example.patcher.SinglePatchExecutionResult
 import com.example.patcher.SnapshotManager
+import com.example.utils.SecurityUtil
 import java.io.File
 
 object SymlinkPatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val linkFile = File(workspaceDir, op.targetPath)
-        val action = op.symlinkAction ?: "CREATE"
-        val target = op.symlinkTarget ?: ""
-
-        val oldHash = if (linkFile.exists()) SnapshotManager.calculateSha256(linkFile) else null
-        val oldSize = if (linkFile.exists()) linkFile.length() else 0L
+        var oldHash: String? = null
+        var oldSize = 0L
 
         try {
+            val linkFile = SecurityUtil.safeResolve(workspaceDir, op.targetPath)
+            val action = op.symlinkAction ?: "CREATE"
+            val target = op.symlinkTarget ?: ""
+
+            oldHash = if (linkFile.exists()) SnapshotManager.calculateSha256(linkFile) else null
+            oldSize = if (linkFile.exists()) linkFile.length() else 0L
+
             when (action) {
                 "CREATE", "MODIFY" -> {
                     if (target.isBlank()) {
@@ -35,6 +40,19 @@ object SymlinkPatch {
                         linkFile.delete()
                     }
 
+                    try {
+                        Os.symlink(target, linkFile.absolutePath)
+                    } catch (e: Exception) {
+                        return SinglePatchExecutionResult(
+                            operationId = op.id,
+                            success = false,
+                            message = "Failed to create authentic symlink using Os.symlink: ${e.message}",
+                            oldHash = oldHash,
+                            oldSize = oldSize,
+                            executionTimeMs = System.currentTimeMillis() - startTime
+                        )
+                    }
+
                     // Record symlink metadata in workspace metadata/symlinks.txt
                     val metaFile = File(workspaceDir, "metadata/symlinks.txt")
                     metaFile.parentFile?.mkdirs()
@@ -44,8 +62,6 @@ object SymlinkPatch {
                     val newLines = existing + "${op.targetPath} $target"
                     metaFile.writeText(newLines.joinToString("\n") + "\n")
 
-                    // Create placeholder marker file for workspace inspection
-                    linkFile.writeText("SYMLINK -> $target\n", Charsets.UTF_8)
                     val newHash = SnapshotManager.calculateSha256(linkFile)
 
                     return SinglePatchExecutionResult(

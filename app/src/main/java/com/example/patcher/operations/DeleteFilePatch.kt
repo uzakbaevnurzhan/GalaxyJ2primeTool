@@ -9,7 +9,7 @@ object DeleteFilePatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val targetFile = File(workspaceDir, op.targetPath)
+        val targetFile = com.example.utils.SecurityUtil.safeResolve(workspaceDir, op.targetPath)
 
         if (!targetFile.exists()) {
             return SinglePatchExecutionResult(

@@ -159,13 +159,10 @@ fun BootRomAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("BOOT / ROM Analyzer") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "BOOT / ROM Analyzer",
+                subtitle = "Boot Image, Ramdisk & Partitions",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     if (result != null) {
                         IconButton(onClick = {

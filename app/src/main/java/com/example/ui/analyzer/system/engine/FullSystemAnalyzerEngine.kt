@@ -150,7 +150,7 @@ object FullSystemAnalyzerEngine {
         FullSystemAnalysisResult(
             id = UUID.randomUUID().toString(),
             timestamp = System.currentTimeMillis(),
-            appVersion = "Beta 3",
+            appVersion = com.example.config.AppVersionConfig.RELEASE_NAME,
             analysisMode = mode,
             capabilities = capabilities,
             healthStatus = healthStatus,
@@ -252,7 +252,8 @@ object FullSystemAnalyzerEngine {
 
         val cpuArch = System.getProperty("os.arch") ?: "armv7l"
         addSpec("CPU Architecture", cpuArch, EvidenceSource.PROCFS, "os.arch")
-        addSpec("Primary ABI", Build.CPU_ABI, EvidenceSource.ANDROID_API, "Build.CPU_ABI")
+        val primaryAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: "armeabi-v7a"
+        addSpec("Primary ABI", primaryAbi, EvidenceSource.ANDROID_API, "Build.SUPPORTED_ABIS[0]")
         addSpec("Supported ABIs", Build.SUPPORTED_ABIS.joinToString(", "), EvidenceSource.ANDROID_API, "Build.SUPPORTED_ABIS")
 
         val cores = Runtime.getRuntime().availableProcessors()
@@ -414,7 +415,7 @@ object FullSystemAnalyzerEngine {
             RootShell.executeCommand("uname -m").getOrNull() ?: cpuArch
         } else cpuArch
 
-        val systemAbi = Build.CPU_ABI
+        val systemAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: "armeabi-v7a"
         val supportedAbis = Build.SUPPORTED_ABIS.toList()
         val vendorAbi = getSystemProp("ro.vendor.product.cpu.abilist").ifEmpty { systemAbi }
         val halAbi = getSystemProp("ro.system.product.cpu.abilist").ifEmpty { systemAbi }
@@ -859,9 +860,10 @@ object FullSystemAnalyzerEngine {
         var displayEv = "SurfaceFlinger active"
         try {
             val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-            val display = wm?.defaultDisplay
-            resStr = "${display?.width ?: 540}x${display?.height ?: 960}"
-            fps = display?.refreshRate ?: 60.0f
+            val metrics = context.resources.displayMetrics
+            resStr = "${metrics.widthPixels}x${metrics.heightPixels}"
+            @Suppress("DEPRECATION")
+            fps = wm?.defaultDisplay?.refreshRate ?: 60.0f
             displayEv = "Display resolution: $resStr @ ${fps}Hz (SurfaceFlinger active)"
         } catch (e: Throwable) {
             displayEv = "Display metrics fallback: ${e.message}"

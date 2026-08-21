@@ -64,13 +64,10 @@ fun KernelStudioScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Kernel & Device Tree Studio") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Kernel & Device Tree Studio",
+                subtitle = "vmlinux, zImage & DTB/DTBO Analyzer",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     if (analysisResult != null) {
                         IconButton(onClick = {

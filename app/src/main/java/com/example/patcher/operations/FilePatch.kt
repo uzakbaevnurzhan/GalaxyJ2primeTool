@@ -3,6 +3,7 @@ package com.example.patcher.operations
 import com.example.patcher.PatchOperation
 import com.example.patcher.SinglePatchExecutionResult
 import com.example.patcher.SnapshotManager
+import com.example.utils.SecurityUtil
 import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
@@ -12,7 +13,7 @@ object FilePatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val targetFile = File(workspaceDir, op.targetPath)
+        val targetFile = SecurityUtil.safeResolve(workspaceDir, op.targetPath)
 
         if (!targetFile.exists()) {
             return SinglePatchExecutionResult(
@@ -38,54 +39,54 @@ object FilePatch {
             )
         }
 
-        // 2. Prepare replacement bytes/file
-        val replacementBytes: ByteArray = when {
-            op.sourceFilePath != null -> {
-                val srcFile = File(op.sourceFilePath)
-                if (!srcFile.exists()) {
-                    return SinglePatchExecutionResult(
-                        operationId = op.id,
-                        success = false,
-                        message = "Source replacement file not found: ${op.sourceFilePath}",
-                        oldHash = oldHash,
-                        oldSize = oldSize,
-                        executionTimeMs = System.currentTimeMillis() - startTime
-                    )
-                }
-                srcFile.readBytes()
-            }
-            op.sourceContentBase64 != null -> {
-                try {
-                    android.util.Base64.decode(op.sourceContentBase64, android.util.Base64.DEFAULT)
-                } catch (e: Exception) {
-                    return SinglePatchExecutionResult(
-                        operationId = op.id,
-                        success = false,
-                        message = "Failed to decode base64 replacement data: ${e.message}",
-                        oldHash = oldHash,
-                        oldSize = oldSize,
-                        executionTimeMs = System.currentTimeMillis() - startTime
-                    )
-                }
-            }
-            else -> {
+        var sourceFile: File? = null
+        var base64Bytes: ByteArray? = null
+
+        if (op.sourceFilePath != null) {
+            val srcFile = SecurityUtil.safeResolve(workspaceDir, op.sourceFilePath)
+            if (!srcFile.exists()) {
                 return SinglePatchExecutionResult(
                     operationId = op.id,
                     success = false,
-                    message = "No replacement source file or base64 data provided",
+                    message = "Source replacement file not found: ${op.sourceFilePath}",
                     oldHash = oldHash,
                     oldSize = oldSize,
                     executionTimeMs = System.currentTimeMillis() - startTime
                 )
             }
+            sourceFile = srcFile
+        } else if (op.sourceContentBase64 != null) {
+            try {
+                base64Bytes = android.util.Base64.decode(op.sourceContentBase64, android.util.Base64.DEFAULT)
+            } catch (e: Exception) {
+                return SinglePatchExecutionResult(
+                    operationId = op.id,
+                    success = false,
+                    message = "Failed to decode base64 replacement data: ${e.message}",
+                    oldHash = oldHash,
+                    oldSize = oldSize,
+                    executionTimeMs = System.currentTimeMillis() - startTime
+                )
+            }
+        } else {
+            return SinglePatchExecutionResult(
+                operationId = op.id,
+                success = false,
+                message = "No replacement source file or base64 data provided",
+                oldHash = oldHash,
+                oldSize = oldSize,
+                executionTimeMs = System.currentTimeMillis() - startTime
+            )
         }
 
         // 3. ELF ABI validation if target or source is ELF
         val isTargetElf = isElfBinary(targetFile)
-        val isSourceElf = isElfBinary(replacementBytes)
+        val isSourceElf = if (sourceFile != null) isElfBinary(sourceFile) else if (base64Bytes != null) isElfBinary(base64Bytes) else false
+
         if (isTargetElf && isSourceElf) {
-            val targetArch = getElfMachine(targetFile.readBytes())
-            val sourceArch = getElfMachine(replacementBytes)
+            val targetArch = getElfMachine(targetFile)
+            val sourceArch = if (sourceFile != null) getElfMachine(sourceFile) else if (base64Bytes != null) getElfMachine(base64Bytes) else null
+
             if (targetArch != null && sourceArch != null && targetArch != sourceArch) {
                 return SinglePatchExecutionResult(
                     operationId = op.id,
@@ -100,13 +101,17 @@ object FilePatch {
 
         // 4. Write replacement file
         try {
-            targetFile.writeBytes(replacementBytes)
-            val newHash = SnapshotManager.calculateSha256(targetFile)
+            if (sourceFile != null) {
+                sourceFile.copyTo(targetFile, overwrite = true)
+            } else if (base64Bytes != null) {
+                targetFile.writeBytes(base64Bytes)
+            }
 
+            val newHash = SnapshotManager.calculateSha256(targetFile)
             return SinglePatchExecutionResult(
                 operationId = op.id,
                 success = true,
-                message = "Replaced ${op.targetPath} (${replacementBytes.size} bytes written)",
+                message = "Replaced ${op.targetPath}",
                 oldHash = oldHash,
                 newHash = newHash,
                 oldSize = oldSize,
@@ -149,5 +154,16 @@ object FilePatch {
         val buffer = ByteBuffer.wrap(bytes, 16, 4).order(order)
         buffer.short // e_type
         return buffer.short.toInt() and 0xFFFF
+    }
+
+    fun getElfMachine(file: File): Int? {
+        if (!file.exists() || file.length() < 20) return null
+        return try {
+            val header = ByteArray(20)
+            FileInputStream(file).use { it.read(header) }
+            getElfMachine(header)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

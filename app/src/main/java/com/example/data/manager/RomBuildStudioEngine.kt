@@ -13,6 +13,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import java.util.zip.ZipFile
 
 object RomBuildStudioEngine {
 
@@ -25,7 +26,9 @@ object RomBuildStudioEngine {
         val md5: String,
         val buildReportPath: String,
         val durationMs: Long,
-        val warnings: List<String>
+        val warnings: List<String>,
+        val isVerified: Boolean = false,
+        val packageType: String = "Archive"
     )
 
     suspend fun executeBuildPipeline(
@@ -47,7 +50,7 @@ object RomBuildStudioEngine {
             reportsDir.mkdirs()
 
             if (!workspaceDir.exists() || workspaceDir.listFiles().isNullOrEmpty()) {
-                throw IllegalStateException("Workspace is empty. Unpack or place partition images in workspace first.")
+                throw IllegalStateException("BUILD INCOMPLETE: Workspace is empty. Unpack or place partition images in workspace first.")
             }
 
             // Stage 2: Validate
@@ -55,9 +58,19 @@ object RomBuildStudioEngine {
             val workspaceFiles = workspaceDir.walkTopDown().filter { it.isFile }.toList()
             val hasSystem = workspaceFiles.any { it.name.contains("system") || it.path.contains("system") }
             val hasBoot = workspaceFiles.any { it.name.contains("boot") || it.path.contains("boot") }
+            val hasUpdaterScript = workspaceFiles.any { it.path.replace("\\", "/").contains("META-INF/com/google/android/updater-script") }
+
+            var actualPackageType = "Standard Archive"
+            if (targetPackageType.contains("Flashable", ignoreCase = true)) {
+                if (hasUpdaterScript) {
+                    actualPackageType = "Flashable ROM"
+                } else {
+                    warnings.add("Requested Flashable ZIP, but META-INF/com/google/android/updater-script is missing. Falling back to Standard Archive.")
+                }
+            }
 
             if (!hasSystem) {
-                warnings.add("No explicit system partition/folder detected in workspace. Packaging as generic update bundle.")
+                warnings.add("No explicit system partition/folder detected in workspace.")
             }
             if (!hasBoot) {
                 warnings.add("No boot.img detected. The resulting package might require a separate kernel flash.")
@@ -69,8 +82,8 @@ object RomBuildStudioEngine {
             val outFileName = "${project.name.replace(" ", "_")}_Build_$timeStr.zip"
             val targetZipFile = File(outputDir, outFileName)
 
-            // Stage 4: Package Streaming Flashable ZIP
-            onProgress("Stage 4/7: Streaming Flashable Package Archive...", 0.60f)
+            // Stage 4: Package Streaming Archive
+            onProgress("Stage 4/7: Streaming Package Archive...", 0.60f)
             val buffer = ByteArray(1024 * 64) // 64KB stream buffer for memory safety
             FileOutputStream(targetZipFile).use { fos ->
                 ZipOutputStream(fos.buffered()).use { zos ->
@@ -100,10 +113,35 @@ object RomBuildStudioEngine {
                 }
             }
 
-            // Stage 5: Post-Validate
+            // Stage 5: Post-Validate (Verify integrity of created archive)
             onProgress("Stage 5/7: Post-Build Archive Verification...", 0.82f)
             if (!targetZipFile.exists() || targetZipFile.length() == 0L) {
-                throw IllegalStateException("Generated package file is missing or zero bytes.")
+                throw IllegalStateException("BUILD INCOMPLETE: Generated package file is missing or zero bytes.")
+            }
+            
+            var isVerified = false
+            try {
+                ZipFile(targetZipFile).use { zip ->
+                    val entries = zip.entries()
+                    var count = 0
+                    while(entries.hasMoreElements()) {
+                        entries.nextElement()
+                        count++
+                    }
+                    val hasUpdaterScript = zip.getEntry("META-INF/com/google/android/updater-script") != null
+                    val hasUpdateBinary = zip.getEntry("META-INF/com/google/android/update-binary") != null
+                    val hasSymlinks = zip.getEntry("symlinks.txt") != null
+                    if (count > 0) isVerified = true
+                    if (actualPackageType == "Flashable ROM" && (!hasUpdaterScript || !hasUpdateBinary)) {
+                        warnings.add("Flashable ROM validation failed: Missing update-binary or updater-script in META-INF")
+                        isVerified = false
+                    }
+                    if (!hasSymlinks) {
+                        warnings.add("Post-build warning: symlinks.txt not found. Flashed system may lack critical symlinks.")
+                    }
+                }
+            } catch (e: Exception) {
+                throw IllegalStateException("BUILD INCOMPLETE: Generated zip is corrupted: ${e.message}")
             }
 
             // Stage 6: Hash Calculation (SHA-256 & MD5 via streaming)
@@ -129,8 +167,10 @@ object RomBuildStudioEngine {
                 appendLine("# ROM Build Certification Report")
                 appendLine("- **Project:** ${project.name}")
                 appendLine("- **Timestamp:** ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}")
+                appendLine("- **Package Type:** $actualPackageType")
                 appendLine("- **Output Package:** ${targetZipFile.name}")
                 appendLine("- **Size:** ${targetZipFile.length()} bytes (${"%.2f".format(targetZipFile.length() / (1024.0 * 1024.0))} MB)")
+                appendLine("- **Verified Integrity:** $isVerified")
                 appendLine("- **SHA-256:** `$sha256Hex`")
                 appendLine("- **MD5:** `$md5Hex`")
                 appendLine("- **Build Duration:** ${duration / 1000}s")
@@ -150,7 +190,12 @@ object RomBuildStudioEngine {
             }
             reportFile.writeText(reportText)
 
-            onProgress("Build Completed Successfully!", 1.0f)
+            if (isVerified) {
+                onProgress("BUILD SUCCESS + VERIFIED", 1.0f)
+            } else {
+                onProgress("BUILD SUCCESS BUT NOT VERIFIED", 1.0f)
+            }
+            
             Result.success(
                 BuildResult(
                     success = true,
@@ -161,7 +206,9 @@ object RomBuildStudioEngine {
                     md5 = md5Hex,
                     buildReportPath = reportFile.absolutePath,
                     durationMs = duration,
-                    warnings = warnings
+                    warnings = warnings,
+                    isVerified = isVerified,
+                    packageType = actualPackageType
                 )
             )
         } catch (e: Exception) {

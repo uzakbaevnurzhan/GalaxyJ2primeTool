@@ -1,5 +1,6 @@
 package com.example.ui.analyzer.system.models
 
+import com.example.config.AppVersionConfig
 import com.example.data.model.ReportFormat
 import kotlinx.serialization.Serializable
 
@@ -359,7 +360,7 @@ data class LogSubsystemAudit(
 data class FullSystemAnalysisResult(
     val id: String,
     val timestamp: Long,
-    val appVersion: String = "Beta 3",
+    val appVersion: String = AppVersionConfig.RELEASE_NAME,
     val toolTitle: String = "Galaxy J2 Prime Tool — Full System Analyzer",
     val analysisMode: AnalysisMode,
     val capabilities: AnalysisCapabilities,

@@ -53,26 +53,10 @@ fun SelinuxAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("SELinux Analyzer", style = MaterialTheme.typography.titleMedium)
-                        uiState.fileName?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "SELinux Analyzer",
+                subtitle = uiState.fileName ?: "Policy, Contexts, AVC Denial & Neverallow Engine",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(
                         onClick = { filePicker.launch(arrayOf("*/*")) },

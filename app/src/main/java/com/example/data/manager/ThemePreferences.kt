@@ -12,6 +12,8 @@ enum class ThemeMode {
     DARK
 }
 
+
+
 object ThemePreferences {
     private const val PREFS_NAME = "j2_prime_theme_prefs"
     private const val KEY_THEME_MODE = "theme_mode"
@@ -26,6 +28,9 @@ object ThemePreferences {
     private const val KEY_MEMORY_MODE = "memory_mode"
     private const val KEY_UI_DENSITY = "ui_density"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
+    private const val KEY_PERFORMANCE_MODE = "performance_mode"
+    private const val KEY_MAX_FPS = "max_fps"
+    private const val KEY_FAST_ANIMATIONS = "fast_animations"
 
     private val _themeMode = MutableStateFlow(ThemeMode.DARK)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -61,6 +66,12 @@ object ThemePreferences {
     val uiDensity: StateFlow<String> = _uiDensity.asStateFlow()
 
     private val _reduceMotion = MutableStateFlow(false)
+    private val _performanceMode = MutableStateFlow("High (89-100%)")
+    val performanceMode: StateFlow<String> = _performanceMode.asStateFlow()
+    private val _maxFpsEnabled = MutableStateFlow(true)
+    val maxFpsEnabled: StateFlow<Boolean> = _maxFpsEnabled.asStateFlow()
+    private val _fastAnimations = MutableStateFlow(true)
+    val fastAnimations: StateFlow<Boolean> = _fastAnimations.asStateFlow()
     val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
 
     private var prefs: SharedPreferences? = null
@@ -85,6 +96,9 @@ object ThemePreferences {
             _memoryMode.value = prefs?.getString(KEY_MEMORY_MODE, "Balanced") ?: "Balanced"
             _uiDensity.value = prefs?.getString(KEY_UI_DENSITY, "Normal") ?: "Normal"
             _reduceMotion.value = prefs?.getBoolean(KEY_REDUCE_MOTION, false) ?: false
+            _performanceMode.value = prefs?.getString(KEY_PERFORMANCE_MODE, "High (89-100%)") ?: "High (89-100%)"
+            _maxFpsEnabled.value = prefs?.getBoolean(KEY_MAX_FPS, true) ?: true
+            _fastAnimations.value = prefs?.getBoolean(KEY_FAST_ANIMATIONS, true) ?: true
         }
     }
 
@@ -147,4 +161,38 @@ object ThemePreferences {
         _reduceMotion.value = enabled
         prefs?.edit()?.putBoolean(KEY_REDUCE_MOTION, enabled)?.apply()
     }
+
+
+    fun setPerformanceMode(mode: String) {
+        _performanceMode.value = mode
+        prefs?.edit()?.putString(KEY_PERFORMANCE_MODE, mode)?.apply()
+        Thread {
+            try {
+                if (mode.contains("Low")) {
+                    com.example.utils.RootShell.executeCommand("echo powersave > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
+                } else if (mode.contains("Medium")) {
+                    com.example.utils.RootShell.executeCommand("echo interactive > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
+                } else {
+                    com.example.utils.RootShell.executeCommand("echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
+                }
+            } catch (e: Exception) {}
+        }.start()
+    }
+    fun setMaxFpsEnabled(enabled: Boolean) {
+        _maxFpsEnabled.value = enabled
+        prefs?.edit()?.putBoolean(KEY_MAX_FPS, enabled)?.apply()
+    }
+    fun setFastAnimations(enabled: Boolean) {
+        _fastAnimations.value = enabled
+        prefs?.edit()?.putBoolean(KEY_FAST_ANIMATIONS, enabled)?.apply()
+        Thread {
+            try {
+                val scale = if (enabled) "0.5" else "1.0"
+                com.example.utils.RootShell.executeCommand("settings put global window_animation_scale $scale")
+                com.example.utils.RootShell.executeCommand("settings put global transition_animation_scale $scale")
+                com.example.utils.RootShell.executeCommand("settings put global animator_duration_scale $scale")
+            } catch (e: Exception) {}
+        }.start()
+    }
+
 }

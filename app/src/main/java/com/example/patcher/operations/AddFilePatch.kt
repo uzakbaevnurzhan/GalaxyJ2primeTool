@@ -3,13 +3,15 @@ package com.example.patcher.operations
 import com.example.patcher.PatchOperation
 import com.example.patcher.SinglePatchExecutionResult
 import com.example.patcher.SnapshotManager
+import com.example.utils.SecurityUtil
 import java.io.File
+import java.io.FileOutputStream
 
 object AddFilePatch {
 
     fun apply(workspaceDir: File, op: PatchOperation): SinglePatchExecutionResult {
         val startTime = System.currentTimeMillis()
-        val targetFile = File(workspaceDir, op.targetPath)
+        val targetFile = SecurityUtil.safeResolve(workspaceDir, op.targetPath)
 
         if (targetFile.exists()) {
             return SinglePatchExecutionResult(
@@ -22,9 +24,11 @@ object AddFilePatch {
             )
         }
 
-        val contentBytes: ByteArray = when {
-            op.sourceFilePath != null -> {
-                val src = File(op.sourceFilePath)
+        try {
+            targetFile.parentFile?.mkdirs()
+
+            if (op.sourceFilePath != null) {
+                val src = SecurityUtil.safeResolve(workspaceDir, op.sourceFilePath)
                 if (!src.exists()) {
                     return SinglePatchExecutionResult(
                         operationId = op.id,
@@ -33,11 +37,11 @@ object AddFilePatch {
                         executionTimeMs = System.currentTimeMillis() - startTime
                     )
                 }
-                src.readBytes()
-            }
-            op.sourceContentBase64 != null -> {
+                src.copyTo(targetFile, overwrite = true)
+            } else if (op.sourceContentBase64 != null) {
                 try {
-                    android.util.Base64.decode(op.sourceContentBase64, android.util.Base64.DEFAULT)
+                    val bytes = android.util.Base64.decode(op.sourceContentBase64, android.util.Base64.DEFAULT)
+                    targetFile.writeBytes(bytes)
                 } catch (e: Exception) {
                     return SinglePatchExecutionResult(
                         operationId = op.id,
@@ -46,16 +50,11 @@ object AddFilePatch {
                         executionTimeMs = System.currentTimeMillis() - startTime
                     )
                 }
+            } else if (op.textDiffPayload != null) {
+                targetFile.writeText(op.textDiffPayload, Charsets.UTF_8)
+            } else {
+                targetFile.writeBytes(ByteArray(0)) // Create empty file
             }
-            op.textDiffPayload != null -> {
-                op.textDiffPayload.toByteArray(Charsets.UTF_8)
-            }
-            else -> ByteArray(0) // Create empty file
-        }
-
-        try {
-            targetFile.parentFile?.mkdirs()
-            targetFile.writeBytes(contentBytes)
 
             // Permissions if provided
             val mode = op.permissionMode ?: "0644"
@@ -70,7 +69,7 @@ object AddFilePatch {
             return SinglePatchExecutionResult(
                 operationId = op.id,
                 success = true,
-                message = "Added new file ${op.targetPath} (${contentBytes.size} bytes)",
+                message = "Added new file ${op.targetPath} (${targetFile.length()} bytes)",
                 oldHash = null,
                 newHash = newHash,
                 oldSize = 0L,

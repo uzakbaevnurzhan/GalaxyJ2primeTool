@@ -178,10 +178,10 @@ fun RootCenterScreen(navController: NavController) {
             if (isAvail) {
                 val modDirs = listOf("/data/adb/modules", "/data/adb/ksu/modules", "/data/adb/ap/modules")
                 modDirs.forEach { dir ->
-                    val lsRes = RootShell.executeCommand("ls $dir").getOrNull() ?: ""
+                    val lsRes = RootShell.executeCommand("ls ${com.example.utils.SecurityUtil.escapeShellArg(dir)}").getOrNull() ?: ""
                     lsRes.lines().filter { it.isNotBlank() }.forEach { modName ->
-                        val propContent = RootShell.executeCommand("cat $dir/$modName/module.prop").getOrNull() ?: ""
-                        val disableExists = RootShell.executeCommand("test -f $dir/$modName/disable && echo 'disabled'").getOrNull()?.contains("disabled") == true
+                        val propContent = RootShell.executeCommand("cat ${com.example.utils.SecurityUtil.escapeShellArg("$dir/$modName/module.prop")}").getOrNull() ?: ""
+                        val disableExists = RootShell.executeCommand("test -f ${com.example.utils.SecurityUtil.escapeShellArg("$dir/$modName/disable")} && echo 'disabled'").getOrNull()?.contains("disabled") == true
                         
                         var id = modName
                         var name = modName
@@ -271,13 +271,10 @@ fun RootCenterScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Root Center", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Root Center",
+                subtitle = "SU Capabilities, SELinux & Partitions",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { refreshRootState() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")

@@ -608,7 +608,7 @@ data class PortAnalysisResult(
     val portWarnings: List<PortWarning> = emptyList(),
     val rootCauses: List<RootCauseCandidate> = emptyList(),
     val whatToFixFirst: FixFirstRecommendation? = null,
-    // Beta 3: Migration Candidates & Structured Port Plan
+    // Migration Candidates & Structured Port Plan
     val migrationCandidates: List<MigrationCandidate> = emptyList(),
     val structuredPortPlan: StructuredPortPlan? = null
 )

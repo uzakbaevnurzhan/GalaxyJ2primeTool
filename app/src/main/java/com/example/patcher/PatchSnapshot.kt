@@ -1,5 +1,8 @@
 package com.example.patcher
 
+import android.system.Os
+import android.system.OsConstants
+import com.example.utils.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -17,9 +20,10 @@ data class SnapshotFileEntry(
     val sha256: String,
     val sizeBytes: Long,
     val isDirectory: Boolean = false,
-    val unixMode: String? = null,
+    val unixMode: Int = 0,
     val isSymlink: Boolean = false,
     val symlinkTarget: String? = null,
+    val lastModified: Long = 0L,
     val backupStoredPath: String? = null // relative inside snapshot directory
 )
 
@@ -68,7 +72,7 @@ object SnapshotManager {
                 // Targeted snapshot for specific files
                 for (relPath in filterRelativePaths) {
                     val targetFile = File(workspaceDir, relPath)
-                    if (targetFile.exists()) {
+                    if (targetFile.exists() || Os.lstat(targetFile.absolutePath).let { true }) {
                         val entry = backupFile(workspaceDir, targetFile, filesBackupDir)
                         if (entry != null) {
                             entries.add(entry)
@@ -89,12 +93,10 @@ object SnapshotManager {
             } else {
                 // Full workspace snapshot
                 workspaceDir.walkTopDown().forEach { file ->
-                    if (file.isFile) {
-                        val entry = backupFile(workspaceDir, file, filesBackupDir)
-                        if (entry != null) {
-                            entries.add(entry)
-                            totalBytes += entry.sizeBytes
-                        }
+                    val entry = backupFile(workspaceDir, file, filesBackupDir)
+                    if (entry != null) {
+                        entries.add(entry)
+                        totalBytes += entry.sizeBytes
                     }
                 }
             }
@@ -120,29 +122,51 @@ object SnapshotManager {
     }
 
     private fun backupFile(workspaceDir: File, file: File, filesBackupDir: File): SnapshotFileEntry? {
-        if (!file.exists()) return null
-        val relPath = file.relativeTo(workspaceDir).path
-        val hash = calculateSha256(file)
-        val size = file.length()
-        
-        val backupDest = File(filesBackupDir, relPath)
-        backupDest.parentFile?.mkdirs()
-        
-        file.copyTo(backupDest, overwrite = true)
+        try {
+            val stat = Os.lstat(file.absolutePath)
+            val isSymlink = OsConstants.S_ISLNK(stat.st_mode)
+            val isDir = OsConstants.S_ISDIR(stat.st_mode)
+            
+            val relPath = file.relativeTo(workspaceDir).path
+            
+            var symlinkTarget: String? = null
+            var hash = "DIRECTORY_OR_SYMLINK"
+            var size = stat.st_size
+            
+            val backupDest = File(filesBackupDir, relPath)
+            backupDest.parentFile?.mkdirs()
 
-        return SnapshotFileEntry(
-            relativePath = relPath,
-            sha256 = hash,
-            sizeBytes = size,
-            isDirectory = file.isDirectory,
-            backupStoredPath = "files/$relPath"
-        )
+            if (isSymlink) {
+                symlinkTarget = Os.readlink(file.absolutePath)
+                hash = "SYMLINK"
+            } else if (!isDir) {
+                hash = calculateSha256(file)
+                file.copyTo(backupDest, overwrite = true)
+            } else {
+                size = 0L
+                hash = "DIRECTORY"
+            }
+
+            return SnapshotFileEntry(
+                relativePath = relPath,
+                sha256 = hash,
+                sizeBytes = size,
+                isDirectory = isDir,
+                unixMode = stat.st_mode and 0xFFF, // get only permissions
+                isSymlink = isSymlink,
+                symlinkTarget = symlinkTarget,
+                lastModified = file.lastModified(),
+                backupStoredPath = if (!isDir && !isSymlink) "files/$relPath" else null
+            )
+        } catch (e: Exception) {
+            return null
+        }
     }
 
     suspend fun listSnapshots(workspaceRoot: File): List<PatchSnapshot> = withContext(Dispatchers.IO) {
         val snapshotsDir = getSnapshotsDir(workspaceRoot)
         if (!snapshotsDir.exists()) return@withContext emptyList()
-
+        
         val list = mutableListOf<PatchSnapshot>()
         snapshotsDir.listFiles()?.filter { it.isDirectory }?.forEach { dir ->
             val metaFile = File(dir, "snapshot.json")
@@ -163,6 +187,7 @@ object SnapshotManager {
         val snapshotsDir = getSnapshotsDir(workspaceRoot)
         val snapshotStorageDir = File(snapshotsDir, snapshotId)
         val metaFile = File(snapshotStorageDir, "snapshot.json")
+        
         if (!metaFile.exists()) return@withContext false
 
         val snapshot = try {
@@ -175,11 +200,25 @@ object SnapshotManager {
         if (!workspaceDir.exists()) workspaceDir.mkdirs()
 
         for (entry in snapshot.files) {
-            val targetFile = File(workspaceDir, entry.relativePath)
+            val targetFile = SecurityUtil.safeResolve(workspaceDir, entry.relativePath)
+                ?: continue // Skip unsafe paths
+                
             if (entry.sha256 == "NOT_EXISTS") {
                 // Originally did not exist, so remove if created
                 if (targetFile.exists()) {
-                    targetFile.delete()
+                    targetFile.deleteRecursively()
+                }
+                continue
+            }
+            
+            if (entry.isDirectory) {
+                targetFile.mkdirs()
+            } else if (entry.isSymlink) {
+                targetFile.delete()
+                try {
+                    Os.symlink(entry.symlinkTarget ?: "", targetFile.absolutePath)
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             } else if (entry.backupStoredPath != null) {
                 val backupFile = File(snapshotStorageDir, entry.backupStoredPath)
@@ -187,6 +226,18 @@ object SnapshotManager {
                     targetFile.parentFile?.mkdirs()
                     backupFile.copyTo(targetFile, overwrite = true)
                 }
+            }
+            
+            // Restore metadata
+            try {
+                if (entry.unixMode != 0) {
+                    Os.chmod(targetFile.absolutePath, entry.unixMode)
+                }
+                if (entry.lastModified > 0) {
+                    targetFile.setLastModified(entry.lastModified)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
         true

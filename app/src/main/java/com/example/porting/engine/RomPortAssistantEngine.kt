@@ -894,7 +894,7 @@ object RomPortAssistantEngine {
             context = context,
             type = ReportType.ROM_PORT_REPORT,
             format = format,
-            projectName = "ROM Porting Matrix (Beta 3): ${result.sourceRom.name} -> ${result.targetDevice.model}",
+            projectName = "ROM Porting Matrix (${com.example.config.AppVersionConfig.RELEASE_NAME}): ${result.sourceRom.name} -> ${result.targetDevice.model}",
             customDetails = sections
         )
 

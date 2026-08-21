@@ -121,13 +121,10 @@ fun UsbHostCenterScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("USB Host & Samsung Odin", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "USB Host & Samsung Odin",
+                subtitle = "OTG Bulk Interface & Protocol Bridge",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { refreshUsbDevices() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh USB")

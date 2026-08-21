@@ -192,20 +192,10 @@ fun ImageAnalyzerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("ROM Image Analyzer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        result?.metadata?.format?.let { fmt ->
-                            Text(fmt.displayName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "ROM Image Analyzer",
+                subtitle = result?.metadata?.format?.displayName ?: "Sparse, EXT4, EROFS, F2FS & Payload",
+                onNavigateBack = { navController.popBackStack() },
                 actions = {
                     if (result != null) {
                         IconButton(onClick = { showExportDialog = true }) {

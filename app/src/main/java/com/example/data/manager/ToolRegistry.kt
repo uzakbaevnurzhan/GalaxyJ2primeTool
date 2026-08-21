@@ -152,7 +152,8 @@ object ToolRegistry {
     ): ToolExecutionResult = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         val toolMeta = probeTool(context, toolName)
-        val fullCmdStr = "$toolName ${arguments.joinToString(" ")}"
+        val escapedArgs = arguments.joinToString(" ") { com.example.utils.SecurityUtil.escapeShellArg(it) }
+        val fullCmdStr = "$toolName $escapedArgs"
 
         if (toolMeta.status == ToolStatus.MISSING_BACKEND) {
             // Check if root shell can execute it or if it's a shell built-in

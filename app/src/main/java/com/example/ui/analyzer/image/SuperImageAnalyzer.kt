@@ -6,7 +6,7 @@ import java.nio.channels.FileChannel
 
 object SuperImageAnalyzer {
     const val LP_PARTITION_RESERVED_BYTES = 4096L
-    const val LP_METADATA_GEOMETRY_MAGIC = 0x616C6F67 // "gola"
+    const val LP_METADATA_GEOMETRY_MAGIC = 0x616c4467 // "gola"
     const val LP_METADATA_HEADER_MAGIC = 0x414C5030 // "0PLA"
 
     const val LP_PARTITION_ATTR_READONLY = 0x0001
@@ -230,7 +230,7 @@ object SuperImageAnalyzer {
                 fileName = "super.img",
                 fileSize = channel.size(),
                 format = ImageFormat.SUPER,
-                magicString = "0x616C6F67",
+                magicString = "0x616c4467",
                 magicHex = "0x${Integer.toHexString(magic).uppercase()}",
                 blockSize = if (logicalBlockSize > 0) logicalBlockSize else 4096,
                 totalBlocks = if (logicalBlockSize > 0) totalAllocatedBytes / logicalBlockSize else 0L,

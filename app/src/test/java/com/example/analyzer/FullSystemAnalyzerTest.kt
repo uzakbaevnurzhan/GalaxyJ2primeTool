@@ -42,7 +42,7 @@ class FullSystemAnalyzerTest {
 
         assertTrue(progressCalled)
         assertNotNull(result.id)
-        assertEquals("Beta 3", result.appVersion)
+        assertEquals(com.example.config.AppVersionConfig.RELEASE_NAME, result.appVersion)
         assertNotNull(result.healthStatus)
         assertNotNull(result.lastConfirmedWorkingStage)
         assertTrue(result.halComponentMatrix.isNotEmpty())
@@ -98,7 +98,7 @@ class FullSystemAnalyzerTest {
         val oldSession = FullSystemAnalysisResult(
             id = "session-1",
             timestamp = 1000L,
-            appVersion = "Beta 3",
+            appVersion = com.example.config.AppVersionConfig.RELEASE_NAME,
             analysisMode = AnalysisMode.DEEP,
             capabilities = AnalysisCapabilities(true, true, true, true, true, true, true, true, true, true, true, true),
             healthStatus = SystemHealthStatus.HEALTHY,

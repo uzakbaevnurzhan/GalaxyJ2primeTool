@@ -73,7 +73,7 @@ object FlashImageMatcher {
         var base = name.lowercase()
         // Strip extensions
         val extensionsToRemove = listOf(
-            ".img.ext4", ".ext4", ".new.dat.br", ".new.dat", ".dat.br", ".dat",
+            ".img.ext4", ".ext4", ".img.erofs", ".erofs", ".img.f2fs", ".f2fs", ".new.dat.br", ".new.dat", ".dat.br", ".dat",
             ".img", ".bin", ".tar", ".md5", ".lz4", ".gz", ".xz"
         )
         for (ext in extensionsToRemove) {

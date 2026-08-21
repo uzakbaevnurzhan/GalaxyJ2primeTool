@@ -72,6 +72,7 @@ fun AppNavigation() {
     val navController = rememberNavController()
     
     Scaffold(
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
@@ -102,7 +103,7 @@ fun AppNavigation() {
         NavHost(
             navController = navController, 
             startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // Main Top-Level Destinations
             composable(Screen.Dashboard.route) { DashboardScreen(navController) }

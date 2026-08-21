@@ -43,6 +43,9 @@ fun SettingsScreen(navController: NavController) {
     val autoUpdateCheck by ThemePreferences.autoUpdateCheck.collectAsState()
     val askBeforeModify by ThemePreferences.askBeforeModify.collectAsState()
     val maxArchiveSize by ThemePreferences.maxArchiveSize.collectAsState()
+    val performanceMode by ThemePreferences.performanceMode.collectAsState()
+    val maxFpsEnabled by ThemePreferences.maxFpsEnabled.collectAsState()
+    val fastAnimations by ThemePreferences.fastAnimations.collectAsState()
 
     var isCheckingUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
@@ -235,6 +238,9 @@ fun SettingsScreen(navController: NavController) {
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
                     val reduceMotion by ThemePreferences.reduceMotion.collectAsState()
+    val performanceMode by ThemePreferences.performanceMode.collectAsState()
+    val maxFpsEnabled by ThemePreferences.maxFpsEnabled.collectAsState()
+    val fastAnimations by ThemePreferences.fastAnimations.collectAsState()
                     SettingsSwitchItem(
                         title = "Reduce Motion / Animations",
                         description = "Optimize rendering performance for low-end devices",
@@ -384,6 +390,31 @@ fun SettingsScreen(navController: NavController) {
                     val backgroundScan by ThemePreferences.backgroundScan.collectAsState()
                     val memoryMode by ThemePreferences.memoryMode.collectAsState()
 
+                    Text("Device Power Profile: $performanceMode", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("Low (30%)") }) { Text("Low") }
+                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("Medium (60%)") }) { Text("Medium") }
+                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("High (89-100%)") }) { Text("High") }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsSwitchItem(
+                        title = "Maximum Supported FPS",
+                        description = "Uncaps display refresh rate if hardware supports it",
+                        checked = maxFpsEnabled,
+                        onCheckedChange = { ThemePreferences.setMaxFpsEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    SettingsSwitchItem(
+                        title = "Fast Animations (0.5x)",
+                        description = "Accelerates UI transitions to 0.5x duration",
+                        checked = fastAnimations,
+                        onCheckedChange = { ThemePreferences.setFastAnimations(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text("Memory Management Mode: $memoryMode", fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(6.dp))
                     Row(
@@ -459,8 +490,8 @@ fun SettingsScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Version: 0.3.0 Beta", fontWeight = FontWeight.Bold)
-                            Text("Release: Beta 3 (Code 3)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Version: ${com.example.config.AppVersionConfig.VERSION_NAME}", fontWeight = FontWeight.Bold)
+                            Text("Release: ${com.example.config.AppVersionConfig.RELEASE_NAME} (Code ${com.example.config.AppVersionConfig.VERSION_CODE})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Button(
                             onClick = { startUpdateCheck() },
@@ -500,9 +531,9 @@ fun SettingsScreen(navController: NavController) {
                         )
                         Spacer(Modifier.width(14.dp))
                         Column {
-                            Text("Galaxy J2 Prime Tool", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                            Text("Version: 0.3.0 Beta (Release: Beta 3)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                            Text("Version code: 3", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(com.example.config.AppVersionConfig.APP_NAME, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text("Version: ${com.example.config.AppVersionConfig.VERSION_NAME} (Release: ${com.example.config.AppVersionConfig.RELEASE_NAME})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Version code: ${com.example.config.AppVersionConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -511,7 +542,7 @@ fun SettingsScreen(navController: NavController) {
                     Text("Host Architecture: ${System.getProperty("os.arch")} (${Build.SUPPORTED_ABIS.joinToString()})", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(8.dp))
                     Text("Target Hardware Profile:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                    Text("Samsung Galaxy J2 Prime (SM-G532F / SM-G532G / SM-G532M)", style = MaterialTheme.typography.bodySmall)
+                    Text("${com.example.config.AppVersionConfig.TARGET_DEVICE} • ${com.example.config.AppVersionConfig.TARGET_CHIPSET}", style = MaterialTheme.typography.bodySmall)
                     Text("Chipset: MediaTek MT6737T (ARM32 Cortex-A53 / MT6735 base)", style = MaterialTheme.typography.bodySmall)
                     Text("Android Target: Android 11 (LineageOS 18.1)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))

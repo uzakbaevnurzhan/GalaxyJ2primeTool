@@ -167,7 +167,7 @@ fun FullSystemAnalyzerScreen(navController: NavController) {
         topBar = {
             AppTopBar(
                 title = "Full System Analyzer",
-                subtitle = "Master Diagnostic Suite • Beta 3",
+                subtitle = "Master Diagnostic Suite • ${com.example.config.AppVersionConfig.RELEASE_NAME}",
                 actions = {
                     IconButton(
                         onClick = {

@@ -36,13 +36,10 @@ fun ErrorCenterScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Error Diagnostic Center", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.example.ui.common.AppTopBar(
+                title = "Error Diagnostic Center",
+                subtitle = "Logged Exceptions & Hardware Failures",
+                onNavigateBack = { navController.navigateUp() },
                 actions = {
                     if (errors.isNotEmpty()) {
                         IconButton(onClick = { ErrorCenterManager.clearErrors() }) {
