@@ -43,9 +43,6 @@ fun SettingsScreen(navController: NavController) {
     val autoUpdateCheck by ThemePreferences.autoUpdateCheck.collectAsState()
     val askBeforeModify by ThemePreferences.askBeforeModify.collectAsState()
     val maxArchiveSize by ThemePreferences.maxArchiveSize.collectAsState()
-    val performanceMode by ThemePreferences.performanceMode.collectAsState()
-    val maxFpsEnabled by ThemePreferences.maxFpsEnabled.collectAsState()
-    val fastAnimations by ThemePreferences.fastAnimations.collectAsState()
 
     var isCheckingUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
@@ -183,7 +180,7 @@ fun SettingsScreen(navController: NavController) {
         topBar = {
             AppTopBar(
                 title = "Settings & Configuration",
-                subtitle = "Galaxy J2 Prime Tool • v0.3.0 Beta"
+                subtitle = "Galaxy J2 Prime Tool • v${com.example.config.AppVersionConfig.VERSION_NAME}"
             )
         }
     ) { padding ->
@@ -238,9 +235,6 @@ fun SettingsScreen(navController: NavController) {
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
                     val reduceMotion by ThemePreferences.reduceMotion.collectAsState()
-    val performanceMode by ThemePreferences.performanceMode.collectAsState()
-    val maxFpsEnabled by ThemePreferences.maxFpsEnabled.collectAsState()
-    val fastAnimations by ThemePreferences.fastAnimations.collectAsState()
                     SettingsSwitchItem(
                         title = "Reduce Motion / Animations",
                         description = "Optimize rendering performance for low-end devices",
@@ -386,77 +380,80 @@ fun SettingsScreen(navController: NavController) {
             item { SettingsSectionTitle("Performance & Workflows") }
             item {
                 SettingsCard {
-                    val concurrentTasks by ThemePreferences.concurrentTasks.collectAsState()
                     val backgroundScan by ThemePreferences.backgroundScan.collectAsState()
-                    val memoryMode by ThemePreferences.memoryMode.collectAsState()
+                    val coreCount = remember { Runtime.getRuntime().availableProcessors().coerceAtLeast(4) }
 
-                    Text("Device Power Profile: $performanceMode", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("Low (30%)") }) { Text("Low") }
-                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("Medium (60%)") }) { Text("Medium") }
-                        OutlinedButton(onClick = { ThemePreferences.setPerformanceMode("High (89-100%)") }) { Text("High") }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    SettingsSwitchItem(
-                        title = "Maximum Supported FPS",
-                        description = "Uncaps display refresh rate if hardware supports it",
-                        checked = maxFpsEnabled,
-                        onCheckedChange = { ThemePreferences.setMaxFpsEnabled(it) }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    SettingsSwitchItem(
-                        title = "Fast Animations (0.5x)",
-                        description = "Accelerates UI transitions to 0.5x duration",
-                        checked = fastAnimations,
-                        onCheckedChange = { ThemePreferences.setFastAnimations(it) }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Memory Management Mode: $memoryMode", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("Low RAM", "Balanced", "High Perf").forEach { mode ->
-                            FilterChip(
-                                selected = memoryMode == mode,
-                                onClick = { ThemePreferences.setMemoryMode(mode) },
-                                label = { Text(mode, style = MaterialTheme.typography.bodySmall) }
+                        Icon(
+                            imageVector = Icons.Filled.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                "Maximum Performance Engine",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
                             )
+                            Text(
+                                "100% hardware resources fully unlocked",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("CPU Multi-Core:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                Text("$coreCount Cores Active (Governor: Performance)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("RAM & Buffer Allocation:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                Text("Large Heap Uncapped", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Rendering Engine:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                Text("Hardware Accelerated (Max FPS)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("I/O Concurrency:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                Text("Full Asynchronous Coroutines", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
                     SettingsSwitchItem(
                         title = "Background Diagnostics Scanning",
-                        description = "Allow passive hardware & sensor telemetry polling",
+                        description = "Allow passive hardware & sensor telemetry polling in background",
                         checked = backgroundScan,
                         onCheckedChange = { ThemePreferences.setBackgroundScan(it) }
                     )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Max Concurrent Tasks ($concurrentTasks)", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                            Text("Limit background worker threads for MT6737T 4-core stability", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Row {
-                            IconButton(onClick = { if (concurrentTasks > 1) ThemePreferences.setConcurrentTasks(concurrentTasks - 1) }) {
-                                Icon(Icons.Filled.Remove, contentDescription = "Decrease")
-                            }
-                            IconButton(onClick = { if (concurrentTasks < 4) ThemePreferences.setConcurrentTasks(concurrentTasks + 1) }) {
-                                Icon(Icons.Filled.Add, contentDescription = "Increase")
-                            }
-                        }
-                    }
                 }
             }
 
@@ -537,15 +534,6 @@ fun SettingsScreen(navController: NavController) {
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text("Build Metadata:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                    Text("Target SDK: 36 • Min SDK: 24 (Android 7.0+)", style = MaterialTheme.typography.bodySmall)
-                    Text("Host Architecture: ${System.getProperty("os.arch")} (${Build.SUPPORTED_ABIS.joinToString()})", style = MaterialTheme.typography.bodySmall)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Target Hardware Profile:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                    Text("${com.example.config.AppVersionConfig.TARGET_DEVICE} • ${com.example.config.AppVersionConfig.TARGET_CHIPSET}", style = MaterialTheme.typography.bodySmall)
-                    Text("Chipset: MediaTek MT6737T (ARM32 Cortex-A53 / MT6735 base)", style = MaterialTheme.typography.bodySmall)
-                    Text("Android Target: Android 11 (LineageOS 18.1)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(8.dp))
                     Text("Open Source Licenses:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
                     Text("Apache License 2.0 & GNU General Public License v2", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(8.dp))

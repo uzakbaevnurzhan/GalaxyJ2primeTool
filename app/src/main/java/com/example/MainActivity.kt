@@ -19,6 +19,9 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+
+    ThemePreferences.init(applicationContext)
+    ThemePreferences.applyMaximumPerformanceMode()
     
     lifecycleScope.launch {
         ThemePreferences.maxFpsEnabled.collect { enabled ->

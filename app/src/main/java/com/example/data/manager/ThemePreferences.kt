@@ -66,7 +66,7 @@ object ThemePreferences {
     val uiDensity: StateFlow<String> = _uiDensity.asStateFlow()
 
     private val _reduceMotion = MutableStateFlow(false)
-    private val _performanceMode = MutableStateFlow("High (89-100%)")
+    private val _performanceMode = MutableStateFlow("Maximum Power (100% Unlocked)")
     val performanceMode: StateFlow<String> = _performanceMode.asStateFlow()
     private val _maxFpsEnabled = MutableStateFlow(true)
     val maxFpsEnabled: StateFlow<Boolean> = _maxFpsEnabled.asStateFlow()
@@ -88,18 +88,42 @@ object ThemePreferences {
             _dynamicColor.value = prefs?.getBoolean(KEY_DYNAMIC_COLOR, true) ?: true
             _autoUpdateCheck.value = prefs?.getBoolean(KEY_AUTO_UPDATE_CHECK, false) ?: false
             _askBeforeModify.value = prefs?.getBoolean(KEY_ASK_BEFORE_MODIFY, true) ?: true
-            _maxArchiveSize.value = prefs?.getInt(KEY_MAX_ARCHIVE_SIZE, 2048) ?: 2048
-            _concurrentTasks.value = prefs?.getInt(KEY_CONCURRENT_TASKS, 2) ?: 2
-            _largeFileThreshold.value = prefs?.getInt(KEY_LARGE_FILE_THRESHOLD, 100) ?: 100
-            _logCacheLines.value = prefs?.getInt(KEY_LOG_CACHE_LINES, 5000) ?: 5000
+            _maxArchiveSize.value = prefs?.getInt(KEY_MAX_ARCHIVE_SIZE, 4096) ?: 4096
+            _concurrentTasks.value = Runtime.getRuntime().availableProcessors().coerceAtLeast(4)
+            _largeFileThreshold.value = prefs?.getInt(KEY_LARGE_FILE_THRESHOLD, 250) ?: 250
+            _logCacheLines.value = prefs?.getInt(KEY_LOG_CACHE_LINES, 10000) ?: 10000
             _backgroundScan.value = prefs?.getBoolean(KEY_BACKGROUND_SCAN, true) ?: true
-            _memoryMode.value = prefs?.getString(KEY_MEMORY_MODE, "Balanced") ?: "Balanced"
+            _memoryMode.value = "Maximum Performance (High Throughput)"
             _uiDensity.value = prefs?.getString(KEY_UI_DENSITY, "Normal") ?: "Normal"
-            _reduceMotion.value = prefs?.getBoolean(KEY_REDUCE_MOTION, false) ?: false
-            _performanceMode.value = prefs?.getString(KEY_PERFORMANCE_MODE, "High (89-100%)") ?: "High (89-100%)"
-            _maxFpsEnabled.value = prefs?.getBoolean(KEY_MAX_FPS, true) ?: true
-            _fastAnimations.value = prefs?.getBoolean(KEY_FAST_ANIMATIONS, true) ?: true
+            _reduceMotion.value = false
+            _performanceMode.value = "Maximum Power (100% Unlocked)"
+            _maxFpsEnabled.value = true
+            _fastAnimations.value = true
+
+            // Automatically optimize device to 100% maximum hardware performance
+            applyMaximumPerformanceMode()
         }
+    }
+
+    /**
+     * Applies full CPU clock frequencies, onlines all cores, and enables hardware acceleration
+     */
+    fun applyMaximumPerformanceMode() {
+        Thread {
+            try {
+                // Online all CPU cores
+                for (i in 0..7) {
+                    com.example.utils.RootShell.executeCommand("echo 1 > /sys/devices/system/cpu/cpu$i/online")
+                    com.example.utils.RootShell.executeCommand("echo performance > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor")
+                }
+                // Global scaling governor override
+                com.example.utils.RootShell.executeCommand("echo performance > /sys/devices/system/cpu/cpufreq/scaling_governor")
+                // Accelerate window and animator scales for instant UI feedback
+                com.example.utils.RootShell.executeCommand("settings put global window_animation_scale 0.5")
+                com.example.utils.RootShell.executeCommand("settings put global transition_animation_scale 0.5")
+                com.example.utils.RootShell.executeCommand("settings put global animator_duration_scale 0.5")
+            } catch (_: Exception) {}
+        }.start()
     }
 
     fun setThemeMode(mode: ThemeMode) {
